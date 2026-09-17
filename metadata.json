@@ -1,0 +1,5 @@
+{
+  "name": "Vòng Quay Tri Thức(V3)",
+  "description": "Một trò chơi giáo dục tương tác giúp giáo viên chọn ngẫu nhiên học sinh và câu hỏi. Câu hỏi trắc nghiệm 4 lựa chọn có dạng Câu hỏi, phương án 1, phương án 2, phương án 3, phương án 4, đáp án. Tích hợp âm thanh vui nhộn và tạo câu hỏi bằng AI.",
+  "requestFramePermissions": []
+}
