@@ -14,345 +14,40 @@ interface ConfigPanelProps {
     initialQuestionsPerTurn: number;
 }
 
-const CLASS_6A2_STUDENTS = `Bế Hoài An
-Hoàng Thị Hoài An
-Hứa Nguyên An
-Hoàng Trâm Anh
-Phùn Thế Anh
-Mễ Gia Bảo
-Phan Ngọc Bích
-Nguyễn Quỳnh Chi
-Trần Ngọc Diệp
-Vi Đức Dĩnh
-Nguyễn Thị Linh Đan
-Nguyễn Tiến Đạt
-Ngọc Hải Đăng
-Trần Hải Đăng
-Ngọc Đức Giang
-Phạm Thúy Hà
-Phạm Thị Hiên
-Ngọc Duy Hiếu
-Trần Đức Hiếu
-Vi Hiền Hòa
-Phạm Minh Huyền
-Phạm Gia Hưng
-Trần Anh Khoa
-Đoàn Ngọc Linh
-Vi Hiếu Linh
-Nguyễn Kim Ngân
-Nguyễn Bích Ngọc
-Hà Nguyên Phong
-Nguyễn Danh Phong
-Vũ Thuận Phong
-Lã Minh Phương
-Hoàng Kim Phượng
-Vũ Minh Quân
-Phùng Thị Minh Tâm
-Ngọc Bích Thảo
-Trần Bảo Trọng
-Đỗ Khôi Vĩ
-Nguyễn Ngọc Thiên Vũ
-Lục Tường Vy
-Nguyễn Bảo Yến`;
+const CLASS_6A2_STUDENTS = ``;
+const CLASS_6A3_STUDENTS = ``;
+const CLASS_6A4_STUDENTS = ``;
+const CLASS_6A5_STUDENTS = ``;
+const CLASS_6A6_STUDENTS = ``;
 
-const CLASS_6A3_STUDENTS = `Hoàng Bảo An
-Vy Bình An
-Ngô Triệu Anh
-Nguyễn Thị Phương Anh
-Vi Ngọc Anh
-Nguyễn Phúc Việt Bách
-Đinh Thế Bảo
-Hoàng Minh Bảo
-Ngụy Gia Bảo
-Lâm Mạnh Cường
-Chúc Thảo Diệp
-Nông Khánh Diệp
-Đặng Khánh Đan
-Vũ Linh Đan
-Nông Minh Đức
-Ngô Văn Giáp
-La Thu Hà
-Nông Thị Hạnh
-Tạ Minh Hằng
-Nguyễn Thái Lê Hân
-Giáp Mạnh Hùng
-Nguyễn Quang Khiêm
-Lục Trung Kiên
-Nông Chí Kiên
-Vũ Ngọc Lan
-Bùi Nguyễn Thảo Linh
-Vi Ngọc Mai
-Hà Bảo Minh
-Nguyễn Nhật Minh
-Vi Văn Nam
-Nông Thị Kim Ngân
-Nguyễn Minh Nghĩa
-Nguyễn Phúc Thảo Nhi
-Giáp Hoàng Quân
-Đỗ Huệ San
-Nông Anh Thư
-Hoàng Minh Tiến
-Nông Thùy Trang
-Nông Đức Trung
-Hoàng Minh Tú`;
+const CLASS_7A1_STUDENTS = ``;
+const CLASS_7A2_STUDENTS = ``;
+const CLASS_7A3_STUDENTS = ``;
+const CLASS_7A4_STUDENTS = ``;
+const CLASS_7A5_STUDENTS = ``;
+const CLASS_7A6_STUDENTS = ``;
 
-const CLASS_7A1_STUDENTS = `Bế Quỳnh Châu
-Ngô Thị Mỹ Chi
-Nguyễn Ngọc Diệp
-Đỗ Ngọc Hằng
-Ngọc Thanh Hằng
-Đỗ Thu Hiền
-Ngô Văn Hòa
-Phạm Quang Huy
-Trần Chấn Hưng
-Nguyễn Đức Minh Khang
-Vũ Bùi Gia Khánh
-Lăng Nhật Khiêm
-Vi Hiểu Minh
-Lục Hà My
-Lã Phương Nam
-Chu Bảo Ngọc
-Nguyễn Thị Phương Ngọc
-Lương Thị Thảo Nguyên
-Nguyễn Thị Thảo Nguyên
-Nguyễn Trí Nguyên
-Trần Đức Phát
-Nguyễn Hải Phong
-Nguyễn Hà Phương
-Trần Nam Quang
-Hoàng Lệ Quyên
-Trần Minh Sang
-Vi Tấn Tài
-Ngọc Đức Tâm
-Bùi Ngân Thương
-Lương Huyền Trang
-Lê Thị Kiều Trinh
-Chu Minh Tú
-Lãnh Gia Tuệ
-Hoàng Sơn Tùng
-Đào Thanh Tuyên
-Nguyễn Tố Uyên
-Trần Lâm Uyên
-Trần Thảo Uyên
-Nguyễn Đức Vĩ
-Nguyễn Phương Vy`;
+const CLASS_8A1_STUDENTS = ``;
+const CLASS_8A2_STUDENTS = ``;
+const CLASS_8A3_STUDENTS = ``;
+const CLASS_8A4_STUDENTS = ``;
+const CLASS_8A5_STUDENTS = ``;
+const CLASS_8A6_STUDENTS = ``;
 
-const CLASS_7A2_STUDENTS = `Nông Khánh An
-Hà Nguyễn Bảo Anh
-Nguyễn Trâm Anh
-Trần Duy Bảo
-Ngô Hữu Cảnh
-Bùi Đức Chí
-Đàm Ngọc Diệp
-Lương Ngọc Diệp
-Phạm Khánh Duy
-Nguyễn Linh Đan
-Trần Linh Đan
-Nông Mạnh Đức
-Hoàng Nông Gia Hân
-Nông Mai Hân
-Vũ Thu Hiền
-Nguyễn Thị Ngọc Khánh
-Nguyễn Phúc Lâm
-Phạm Tùng Lâm
-Vi Khánh Lâm
-Mễ Khải Linh
-Ngô Phúc Loan
-Lưu Trung Luân
-Lê Hoàng Minh
-Nguyễn Quang Minh
-Phạm Nguyễn Hà My
-Lê Đại Nghĩa
-Nông Minh Nghĩa
-Phùng Trần Uyên Nhi
-Bàn Minh Quân
-Lê Chiến Thắng
-Lưu Bảo Thắng
-Lã Hoài Thu
-Vi Hồng Thương
-Trịnh Thanh Trúc
-La Ngọc Uyên
-Vi Ngọc Uyên
-Vi Thị Hồng Vân
-Nông Nguyễn Hà Vi
-Trương Hải Vũ
-Nguyễn Thị Hải Yến`;
-
-const CLASS_7A3_STUDENTS = `Nguyễn Bảo An
-Nguyễn Hữu An
-Nguyễn Hải Anh
-Nguyễn Thị Ngọc Anh
-Phạm Việt Anh
-Trần Quỳnh Anh
-Trần Tùng Anh
-Lã Thị Ngọc Bích
-Hồ An Thái Bình
-Vũ Hoàng Duy
-Trần Hương Giang
-Bế Hân Hân
-Nguyễn Bảo Hân
-Nông Trần Bảo Hân
-Nguyễn Khánh Huyền
-Vũ Đức Khang
-Hoàng Ngọc Khánh
-Lương Mai Khôi
-Trần Tuấn Kiệt
-La Thu Loan
-Phạm Minh Luân
-Nông Thị Phương Mai
-La Nhật Minh
-Nguyễn Nhật Minh
-Vũ Ngọc Minh
-Hoàng Yến My
-Đặng Bảo Nam
-Bùi Tuấn Nguyên
-Nông Duy Phong
-Hoàng Xuân Phúc
-Nông Bảo Phúc
-Vũ Gia Phúc
-Bùi Mai Phương
-Chu Minh Quân
-Nguyễn Thị Ngọc Quỳnh
-Vũ Thúy Thảo
-Hoàng Quyết Thắng
-Nông Thị Anh Thư
-Đặng Vũ Hương Trà
-Lãnh Ngọc Trâm
-Đinh Sơn Tùng
-Hoàng Sơn Tùng
-Nguyễn Hà Anh Vũ
-Ngọc Hà Vy`;
-
-const CLASS_8A1_STUDENTS = `Đỗ Nguyễn Gia Bảo
-Nguyễn Ngọc Bích
-Trần Phan Ngọc Bích
-Nông Thị Mai Chi
-Lê Ngọc Diệp
-Phạm Linh Đan
-Bùi Hải Đăng
-Giáp Trung Hải
-Tạ Thị Ngọc Hân
-Nguyễn Công Hiếu
-Nguyễn Đức Hiếu
-Nguyễn Minh Hiếu
-Hoàng Quốc Huy
-Nguyễn Hải Huyền
-Hoàng Thu Hương
-Nông Anh Khoa
-Hà Minh Lâm
-Ngọc Khánh Linh
-Nguyễn Diệu Linh
-Đồng Xuân Long
-Vi Thảo Ly
-Lăng Hoàng Mai
-Lê Nhật Minh
-Phan Thị Huyền My
-Đặng Hồng Ngọc
-Nguyễn Minh Ngọc
-Lương Ánh Nguyệt
-Nguyễn Minh Nguyệt
-Nguyễn Vi Ngọc Nhi
-Nông Hoàng Uyển Nhi
-Vũ Thân Phúc
-Phạm Minh Quân
-Nguyễn Thị Thanh Tâm
-Nguyễn Đức Thanh
-Nông Thị Anh Thư
-Phạm Anh Thư
-Nguyễn Thị Huyền Trang
-Nguyễn Minh Tú
-Nguyễn Công Vinh
-Nguyễn Minh Vũ`;
-
-const CLASS_8A2_STUDENTS = `Hồ Hà Anh
-Nguyễn Vi Diệp Anh
-Hoàng Hải Băng
-Nguyễn Ngọc Băng
-Nguyễn Lương Bình
-Phạm Việt Cường
-Nguyễn Chí Dũng
-Nguyễn Hùng Dũng
-Nguyễn Minh Đức
-Ngọc Hà
-Nguyễn Việt Hà
-Vi Bảo Hân
-Phạm Thị Thu Hiền
-Nguyễn Quang Huy
-Trần Quang Huy
-Nguyễn Bảo Khánh
-Hoàng Tùng Lâm
-Nguyễn Phương Linh
-Bùi Bảo Long
-Hoàng Hải Long
-Nguyễn Khánh Ly
-Đoàn Bảo Ngọc
-Hoàng Thanh Ngọc
-Hoàng Hương Nguyên
-Ngô Xuân Nhi
-Nông Hoàng Phi
-Giáp Minh Quân
-Nguyễn Thị Thanh Tâm
-Nguyễn Minh Thư
-Lê Minh Tiến
-Khuất Huyền Trang
-Ngọc Bảo Trang
-Hà Hoàng Bảo Trâm
-Nguyễn Thanh Trúc
-Nịnh Tuấn Tú
-Vi Ánh Tuyết
-Nông Thị Mai Uyên
-Hà Hồng Vân
-Nguyễn Đỗ Thảo Vân`;
-
-const CLASS_8A3_STUDENTS = `Hồ Mạnh An
-Phan Bảo An
-Phùng Diệp Chi
-Trần Khánh Chi
-Vũ Trần Khánh Chi
-Nông Đức Duy
-Hoàng Công Đạt
-Nguyễn Hoàng Giang
-Vi Hoàng Hà
-Vũ Thu Hà
-Đinh Hoàng Hải
-Hoàng Thị Thanh Hằng
-Vũ Thu Hoài
-Hoàng Gia Huy
-Nguyễn Thị Huyền
-La Thị Thu Hương
-Trần Tứ Khả
-Nông Duy Khánh
-Nông Thuỳ Linh
-Ong Quang Long
-Tăng Đức Mạnh
-Hoàng Thân Bảo Minh
-Nguyễn Quang Minh
-Nguyễn Thảo My
-Đỗ Văn Nghĩa
-Đồng Quế Quỳnh Nhi
-Mai Vân Nhi
-Lào Mai phương
-Đỗ Hoàng Quân
-Vũ Minh Quân
-Nguyễn Băng Tâm
-Ngọc Đức Thắng
-Vy Giang Thiên
-Phạm Đức Thủy
-Nguyễn Thị Yến Trang
-Nông Văn Trung
-Nông Mạnh Trường
-Nông Kim Tuyến
-Ngọc Thị Ánh Tuyết
-Nguyễn Hoàng Minh Vũ
-Nguyễn Mạnh Vũ
-Hoàng Hà Vy
-Nguyễn Hải Yến`;
+const CLASS_9A1_STUDENTS = ``;
+const CLASS_9A2_STUDENTS = ``;
+const CLASS_9A3_STUDENTS = ``;
+const CLASS_9A4_STUDENTS = ``;
+const CLASS_9A5_STUDENTS = ``;
+const CLASS_9A6_STUDENTS = ``;
 
 const CLASS_6_QUESTIONS = ``;
 
 const CLASS_7_QUESTIONS = ``;
 
 const CLASS_8_QUESTIONS = ``;
+
+const CLASS_9_QUESTIONS = ``;
 
 const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, initialTimeLimit, initialStudentsPerGroup, initialQuestionsPerTurn, onSave, onCancel }) => {
     // Load classes from LocalStorage or init with specific classes
@@ -387,6 +82,15 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
             } else if (name === "Lớp 6A3") {
                 students = CLASS_6A3_STUDENTS;
                 questions = CLASS_6_QUESTIONS;
+            } else if (name === "Lớp 6A4") {
+                students = CLASS_6A4_STUDENTS;
+                questions = CLASS_6_QUESTIONS;
+            } else if (name === "Lớp 6A5") {
+                students = CLASS_6A5_STUDENTS;
+                questions = CLASS_6_QUESTIONS;
+            } else if (name === "Lớp 6A6") {
+                students = CLASS_6A6_STUDENTS;
+                questions = CLASS_6_QUESTIONS;
             } else if (name === "Lớp 7A1") {
                 students = CLASS_7A1_STUDENTS;
                 questions = CLASS_7_QUESTIONS;
@@ -396,15 +100,51 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
             } else if (name === "Lớp 7A3") {
                 students = CLASS_7A3_STUDENTS;
                 questions = CLASS_7_QUESTIONS;
+            } else if (name === "Lớp 7A4") {
+                students = CLASS_7A4_STUDENTS;
+                questions = CLASS_7_QUESTIONS;
+            } else if (name === "Lớp 7A5") {
+                students = CLASS_7A5_STUDENTS;
+                questions = CLASS_7_QUESTIONS;                
+            } else if (name === "Lớp 7A6") {
+                students = CLASS_7A6_STUDENTS;
+                questions = CLASS_7_QUESTIONS;
             } else if (name === "Lớp 8A1") {
                 students = CLASS_8A1_STUDENTS;
                 questions = CLASS_8_QUESTIONS;
             } else if (name === "Lớp 8A2") {
                 students = CLASS_8A2_STUDENTS;
-                questions = "";
+                questions = CLASS_8_QUESTIONS;
             } else if (name === "Lớp 8A3") {
                 students = CLASS_8A3_STUDENTS;
                 questions = CLASS_8_QUESTIONS;
+            } else if (name === "Lớp 8A4") {
+                students = CLASS_8A4_STUDENTS;
+                questions = CLASS_8_QUESTIONS;
+            } else if (name === "Lớp 8A5") {
+                students = CLASS_8A5_STUDENTS;
+                questions = CLASS_8_QUESTIONS;
+            } else if (name === "Lớp 8A6") {
+                students = CLASS_8A6_STUDENTS;
+                questions = CLASS_8_QUESTIONS;
+            } else if (name === "Lớp 9A1") {
+                students = CLASS_9A1_STUDENTS;
+                questions = CLASS_9_QUESTIONS;
+            } else if (name === "Lớp 9A2") {
+                students = CLASS_9A2_STUDENTS;
+                questions = CLASS_9_QUESTIONS;
+            } else if (name === "Lớp 9A3") {
+                students = CLASS_9A3_STUDENTS;
+                questions = CLASS_9_QUESTIONS;
+            } else if (name === "Lớp 9A4") {
+                students = CLASS_9A4_STUDENTS;
+                questions = CLASS_9_QUESTIONS;
+            } else if (name === "Lớp 9A5") {
+                students = CLASS_9A5_STUDENTS;
+                questions = CLASS_9_QUESTIONS;
+            } else if (name === "Lớp 9A6") {
+                students = CLASS_9A6_STUDENTS;
+                questions = CLASS_9_QUESTIONS;
             }
 
             return {
