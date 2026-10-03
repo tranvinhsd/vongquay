@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { generateQuestions } from '../services/geminiService';
-import { Loader2, Sparkles, Plus, Trash2, Edit2, Save, Users, Upload, Download, FileText, FolderInput, Clock } from 'lucide-react';
+import { generateQuestions, balanceAndPermuteQuestionsText } from '../services/geminiService';
+import { Loader2, Sparkles, Plus, Trash2, Edit2, Save, Users, Upload, Download, FileText, FolderInput, Clock, Shuffle, CheckCircle2 } from 'lucide-react';
 import { ClassData, DEFAULT_STUDENTS, DEFAULT_QUESTIONS } from '../types';
 
 interface ConfigPanelProps {
@@ -225,10 +225,25 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                 : formattedNewQuestions;
 
             handleUpdateCurrentClass('questions', updatedQuestions);
+            alert(`Đã kiểm tra chất lượng và tạo thành công ${newQuestions.length} câu hỏi mới!\n\n✓ Đã kiểm tra lại nội dung câu hỏi, 4 phương án trả lời và đáp án đúng.\n✓ Đã hoán vị ngẫu nhiên các phương án và đáp án để đảm bảo mỗi phương án đúng A, B, C, D đều đạt tỉ lệ 25%.`);
         } else {
             alert("Không thể tạo câu hỏi. Vui lòng kiểm tra lại API Key hoặc thử lại sau.");
         }
         setIsGenerating(false);
+    };
+
+    const handleBalanceQuestions = () => {
+        if (!tempQuestions.trim()) {
+            alert("Chưa có câu hỏi nào để hoán vị!");
+            return;
+        }
+        const res = balanceAndPermuteQuestionsText(tempQuestions);
+        if (res.count === 0) {
+            alert("Không tìm thấy câu hỏi hợp lệ để hoán vị. Vui lòng kiểm tra định dạng câu hỏi (mỗi câu cần có nội dung, 4 phương án A, B, C, D và dòng Đáp án).");
+            return;
+        }
+        handleUpdateCurrentClass('questions', res.formattedText);
+        alert(`Đã kiểm tra chất lượng và hoán vị thành công ${res.count} câu hỏi!\nTỉ lệ đáp án sau khi cân bằng:\n- A: ${res.distribution.A} (${Math.round((res.distribution.A / res.count) * 100)}%)\n- B: ${res.distribution.B} (${Math.round((res.distribution.B / res.count) * 100)}%)\n- C: ${res.distribution.C} (${Math.round((res.distribution.C / res.count) * 100)}%)\n- D: ${res.distribution.D} (${Math.round((res.distribution.D / res.count) * 100)}%)`);
     };
 
     const handleAddClass = () => {
@@ -581,6 +596,13 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                         </label>
                          <div className="flex gap-2">
                             <button 
+                                onClick={handleBalanceQuestions}
+                                className="p-2 text-indigo-600 hover:bg-indigo-100 rounded-lg transition-colors" 
+                                title="Kiểm tra & Hoán vị phương án để tỉ lệ đáp án A, B, C, D đạt 25%"
+                            >
+                                <Shuffle size={18} />
+                            </button>
+                            <button 
                                 onClick={() => {
                                     if (confirm("Bạn có chắc chắn muốn xóa TẤT CẢ câu hỏi của lớp này? Hành động này không thể hoàn tác.")) {
                                         handleUpdateCurrentClass('questions', '');
@@ -605,14 +627,14 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                     </div>
                     
                     {/* AI Generator */}
-                    <div className="mb-4 bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-100">
+                    <div className="mb-4 bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-100 shadow-sm">
                         <div className="flex gap-2">
                             <input
                                 type="text"
                                 value={aiTopic}
                                 onChange={(e) => setAiTopic(e.target.value)}
                                 placeholder="Nhập chủ đề (VD: Lịch sử Việt Nam, Toán lớp 5)..."
-                                className="flex-1 p-3 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-sm"
+                                className="flex-1 p-3 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-sm bg-white"
                             />
                             <button
                                 onClick={handleGenerateAI}
@@ -627,6 +649,10 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                                 {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
                                 {isGenerating ? 'Đang tạo...' : 'Tạo 40 câu'}
                             </button>
+                        </div>
+                        <div className="mt-2.5 text-xs text-indigo-700 flex items-center gap-1.5 font-medium bg-white/70 px-3 py-1.5 rounded-lg border border-purple-100">
+                            <CheckCircle2 size={15} className="text-green-600 shrink-0" />
+                            <span>Tự động kiểm tra chất lượng & hoán vị phương án đảm bảo đáp án đúng A, B, C, D đạt tỉ lệ đều 25%.</span>
                         </div>
                     </div>
 
