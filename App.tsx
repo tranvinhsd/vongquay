@@ -1,23 +1,63 @@
-
 import React, { useState, useMemo } from 'react';
 import Wheel from './components/Wheel';
 import ConfigPanel from './components/ConfigPanel';
 import QuestionModal from './components/QuestionModal';
 import HistoryModal from './components/HistoryModal';
 import WinnerModal from './components/WinnerModal';
+import StudentListModal from './components/StudentListModal';
 import { Student, Question, GameState, HistoryRecord, DEFAULT_STUDENTS, DEFAULT_QUESTIONS, QUESTIONS_PER_TURN } from './types';
-import { Settings, RefreshCw, Trophy, History, Users } from 'lucide-react';
+import { Settings, RefreshCw, Trophy, History, Users, Star } from 'lucide-react';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.IDLE);
-  const [allStudents, setAllStudents] = useState<Student[]>(
-    DEFAULT_STUDENTS.map((name, i) => ({ id: `s-${i}`, name, selected: false }))
-  );
-  const [allQuestions, setAllQuestions] = useState<Question[]>(
-    DEFAULT_QUESTIONS.map((text, i) => ({ id: `q-${i}`, text, used: false }))
-  );
+
+  // Khởi tạo danh sách học sinh từ localStorage nếu đã có
+  const [allStudents, setAllStudents] = useState<Student[]>(() => {
+    try {
+      const saved = localStorage.getItem('wheel_classes');
+      const activeClassId = localStorage.getItem('wheel_active_class_id');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const cls = (activeClassId && parsed.find((c: any) => c.id === activeClassId)) || parsed[0];
+          if (cls && cls.students) {
+            const names = cls.students.split('\n').map((s: string) => s.trim()).filter(Boolean);
+            const prioSet = new Set(cls.prioritizedStudents || []);
+            return names.map((name: string, i: number) => ({
+              id: `s-${i}`,
+              name,
+              selected: false,
+              priority: prioSet.has(name)
+            }));
+          }
+        }
+      }
+    } catch (e) {}
+    return DEFAULT_STUDENTS.map((name, i) => ({ id: `s-${i}`, name, selected: false, priority: false }));
+  });
+
+  // Khởi tạo danh sách câu hỏi từ localStorage nếu đã có
+  const [allQuestions, setAllQuestions] = useState<Question[]>(() => {
+    try {
+      const saved = localStorage.getItem('wheel_classes');
+      const activeClassId = localStorage.getItem('wheel_active_class_id');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const cls = (activeClassId && parsed.find((c: any) => c.id === activeClassId)) || parsed[0];
+          if (cls && cls.questions) {
+            const qList = cls.questions.split(/\n\s*\n/).map((q: string) => q.trim()).filter(Boolean);
+            return qList.map((text: string, i: number) => ({ id: `q-${i}`, text, used: false }));
+          }
+        }
+      }
+    } catch (e) {}
+    return DEFAULT_QUESTIONS.map((text, i) => ({ id: `q-${i}`, text, used: false }));
+  });
+
   const [history, setHistory] = useState<HistoryRecord[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [showStudentModal, setShowStudentModal] = useState<boolean>(false);
   
   const [prizeIndex, setPrizeIndex] = useState<number>(0);
   const [mustSpin, setMustSpin] = useState<boolean>(false);
@@ -30,6 +70,28 @@ const App: React.FC = () => {
 
   const availableStudents = useMemo(() => allStudents.filter(s => !s.selected), [allStudents]);
   const availableQuestions = useMemo(() => allQuestions.filter(q => !q.used), [allQuestions]);
+  const prioritizedCount = useMemo(() => allStudents.filter(s => s.priority).length, [allStudents]);
+  const prioritizedAvailableCount = useMemo(() => availableStudents.filter(s => s.priority).length, [availableStudents]);
+
+  /**
+   * Thuật toán chọn mẫu ngẫu nhiên có trọng số không hoàn lại (Efraimidis - Spirakis)
+   * Học sinh được tick ưu tiên sẽ có trọng số cao gấp 5 lần (x5)
+   */
+  const weightedSample = (students: Student[], count: number): Student[] => {
+    if (students.length <= count) return [...students];
+    
+    const scored = students.map(s => {
+      // Học sinh ưu tiên có trọng số = 5, học sinh thường = 1
+      const weight = s.priority ? 5 : 1;
+      const u = Math.max(1e-9, Math.random());
+      const key = Math.pow(u, 1 / weight);
+      return { student: s, key };
+    });
+    
+    // Sắp xếp giảm dần theo khóa ngẫu nhiên có trọng số
+    scored.sort((a, b) => b.key - a.key);
+    return scored.slice(0, count).map(item => item.student);
+  };
 
   const handleSpin = () => {
     if (gameState !== GameState.IDLE || availableStudents.length < studentsPerGroup) {
@@ -39,14 +101,13 @@ const App: React.FC = () => {
         return;
     }
     
-    // Chọn n học sinh ngẫu nhiên
-    const shuffledStudents = [...availableStudents].sort(() => 0.5 - Math.random());
-    const winners = shuffledStudents.slice(0, studentsPerGroup);
+    // Chọn n học sinh ngẫu nhiên có trọng số ưu tiên
+    const winners = weightedSample(availableStudents, studentsPerGroup);
     
     // Wheel sẽ dừng ở học sinh đầu tiên trong nhóm để mang tính biểu tượng
     const firstWinnerIndex = availableStudents.findIndex(s => s.id === winners[0].id);
     
-    setPrizeIndex(firstWinnerIndex);
+    setPrizeIndex(firstWinnerIndex >= 0 ? firstWinnerIndex : 0);
     setMustSpin(true);
     setGameState(GameState.SPINNING);
     setCurrentWinners(winners);
@@ -103,11 +164,25 @@ const App: React.FC = () => {
     setCurrentQuestions([]);
   };
 
-  const handleSaveConfig = (studentsStr: string, questionsStr: string, newTimeLimit: number, newStudentsPerGroup: number, newQuestionsPerTurn: number) => {
+  const handleSaveConfig = (
+    studentsStr: string, 
+    questionsStr: string, 
+    newTimeLimit: number, 
+    newStudentsPerGroup: number, 
+    newQuestionsPerTurn: number,
+    prioritizedList?: string[]
+  ) => {
     const sList = studentsStr.split('\n').map(s => s.trim()).filter(s => s);
     const qList = questionsStr.split(/\n\s*\n/).map(q => q.trim()).filter(q => q);
 
-    setAllStudents(sList.map((name, i) => ({ id: `s-${Date.now()}-${i}`, name, selected: false })));
+    const prioSet = new Set(prioritizedList || []);
+
+    setAllStudents(sList.map((name, i) => ({ 
+      id: `s-${Date.now()}-${i}`, 
+      name, 
+      selected: false,
+      priority: prioSet.has(name)
+    })));
     setAllQuestions(qList.map((text, i) => ({ id: `q-${Date.now()}-${i}`, text, used: false })));
     setTimeLimit(newTimeLimit);
     setStudentsPerGroup(newStudentsPerGroup);
@@ -116,8 +191,49 @@ const App: React.FC = () => {
     setGameState(GameState.IDLE);
   };
 
+  const handleTogglePriority = (studentId: string) => {
+    setAllStudents(prev => {
+      const updated = prev.map(s => s.id === studentId ? { ...s, priority: !s.priority } : s);
+      try {
+        const saved = localStorage.getItem('wheel_classes');
+        const activeClassId = localStorage.getItem('wheel_active_class_id');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const prioNames = updated.filter(s => s.priority).map(s => s.name);
+          const next = parsed.map((c: any) => 
+            (!activeClassId || c.id === activeClassId) ? { ...c, prioritizedStudents: prioNames } : c
+          );
+          localStorage.setItem('wheel_classes', JSON.stringify(next));
+        }
+      } catch (e) {}
+      return updated;
+    });
+  };
+
+  const handleSetAllPriority = (priority: boolean, onlyAvailable: boolean = false) => {
+    setAllStudents(prev => {
+      const updated = prev.map(s => {
+        if (onlyAvailable && s.selected) return s;
+        return { ...s, priority };
+      });
+      try {
+        const saved = localStorage.getItem('wheel_classes');
+        const activeClassId = localStorage.getItem('wheel_active_class_id');
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          const prioNames = updated.filter(s => s.priority).map(s => s.name);
+          const next = parsed.map((c: any) => 
+            (!activeClassId || c.id === activeClassId) ? { ...c, prioritizedStudents: prioNames } : c
+          );
+          localStorage.setItem('wheel_classes', JSON.stringify(next));
+        }
+      } catch (e) {}
+      return updated;
+    });
+  };
+
   const handleReset = () => {
-    if (window.confirm("Bạn có chắc muốn đặt lại trạng thái?")) {
+    if (window.confirm("Bạn có chắc muốn đặt lại trạng thái đã quay của tất cả học sinh và câu hỏi?")) {
         setAllStudents(prev => prev.map(s => ({ ...s, selected: false })));
         setAllQuestions(prev => prev.map(q => ({ ...q, used: false })));
     }
@@ -126,6 +242,8 @@ const App: React.FC = () => {
   if (gameState === GameState.CONFIG) {
     const rawStudents = allStudents.map(s => s.name).join('\n');
     const rawQuestions = allQuestions.map(q => q.text).join('\n\n');
+    const initialPrioritized = allStudents.filter(s => s.priority).map(s => s.name);
+
     return (
         <div className="min-h-screen bg-blue-50 p-8 flex items-center justify-center">
             <ConfigPanel 
@@ -134,6 +252,7 @@ const App: React.FC = () => {
                 initialTimeLimit={timeLimit}
                 initialStudentsPerGroup={studentsPerGroup}
                 initialQuestionsPerTurn={questionsPerTurn}
+                initialPrioritizedStudents={initialPrioritized}
                 onSave={handleSaveConfig} 
                 onCancel={() => setGameState(GameState.IDLE)} 
             />
@@ -151,7 +270,17 @@ const App: React.FC = () => {
             </div>
             <h1 className="text-2xl font-bold text-blue-900 tracking-tight hidden sm:block">Vòng Quay Tri Thức</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+            {/* Nút Xem & Cài đặt Ưu tiên học sinh */}
+            <button 
+                onClick={() => setShowStudentModal(true)}
+                className="flex items-center gap-1.5 px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-800 rounded-full font-bold transition-all border border-amber-200 shadow-sm"
+                title="Xem danh sách học sinh & chọn tick ưu tiên quay"
+            >
+                <Star size={18} className="fill-amber-400 text-amber-500" />
+                <span className="hidden sm:inline">Ưu tiên ({prioritizedCount})</span>
+            </button>
+
             <button 
                 onClick={() => setShowHistory(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-full font-bold transition-colors"
@@ -212,7 +341,15 @@ const App: React.FC = () => {
                 <div className="flex-1 w-full flex flex-col items-center md:items-start justify-center gap-6">
                     <div className="bg-white/80 backdrop-blur p-6 rounded-3xl shadow-xl border-2 border-blue-100 text-center md:text-left animate-float">
                         <h3 className="text-blue-900 font-bold text-xl mb-1">Chế độ Nhóm</h3>
-                        <p className="text-gray-600 text-sm">Hệ thống sẽ chọn ngẫu nhiên <span className="font-bold text-red-500 text-lg">{studentsPerGroup} bạn</span> và <span className="font-bold text-blue-600 text-lg">{questionsPerTurn} câu hỏi</span></p>
+                        <p className="text-gray-600 text-sm">
+                          Hệ thống sẽ chọn ngẫu nhiên <span className="font-bold text-red-500 text-lg">{studentsPerGroup} bạn</span> và <span className="font-bold text-blue-600 text-lg">{questionsPerTurn} câu hỏi</span>
+                        </p>
+                        {prioritizedAvailableCount > 0 && (
+                          <p className="text-amber-800 text-xs font-semibold mt-1 flex items-center gap-1 justify-center md:justify-start">
+                            <Star size={13} className="fill-amber-500 text-amber-500" />
+                            Đang ưu tiên {prioritizedAvailableCount} bạn có dấu ⭐ (x5 cơ hội trúng)
+                          </p>
+                        )}
                     </div>
                     <button
                         onClick={handleSpin}
@@ -235,13 +372,43 @@ const App: React.FC = () => {
             </div>
         )}
 
-        <div className="absolute top-4 left-4 bg-white/80 backdrop-blur p-4 rounded-xl shadow-sm text-lg border border-white z-20">
-            <p>Học sinh chưa chọn: <strong>{availableStudents.length}</strong></p>
-            <p>Câu hỏi khả dụng: <strong>{availableQuestions.length}</strong></p>
-            <p className="mt-2 text-blue-600 font-bold">Thời gian/câu: {timeLimit}s</p>
+        {/* Info card top-left */}
+        <div className="absolute top-4 left-4 bg-white/90 backdrop-blur p-4 rounded-2xl shadow-md border border-white z-20 min-w-[210px]">
+            <p className="flex justify-between items-center text-sm">
+                <span className="text-gray-600">Học sinh chưa chọn:</span> 
+                <strong className="text-gray-900">{availableStudents.length}</strong>
+            </p>
+            <p className="flex justify-between items-center text-sm mt-1">
+                <span className="text-gray-600 flex items-center gap-1">
+                    <Star size={14} className="fill-amber-400 text-amber-500" /> Ưu tiên:
+                </span> 
+                <strong className="text-amber-600">{prioritizedAvailableCount} bạn</strong>
+            </p>
+            <p className="flex justify-between items-center text-sm mt-1">
+                <span className="text-gray-600">Câu hỏi khả dụng:</span> 
+                <strong className="text-gray-900">{availableQuestions.length}</strong>
+            </p>
+            <p className="mt-2 text-blue-600 font-bold text-xs">Thời gian/câu: {timeLimit}s</p>
+            <button 
+                onClick={() => setShowStudentModal(true)}
+                className="mt-3 w-full py-1.5 px-3 bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm"
+            >
+                <Star size={14} className="fill-amber-400 text-amber-500" />
+                Cài đặt ưu tiên học sinh
+            </button>
         </div>
 
       </main>
+
+      {/* Modal chỉnh ưu tiên học sinh trực tiếp */}
+      <StudentListModal
+          isOpen={showStudentModal}
+          students={allStudents}
+          studentsPerGroup={studentsPerGroup}
+          onClose={() => setShowStudentModal(false)}
+          onTogglePriority={handleTogglePriority}
+          onSetAllPriority={handleSetAllPriority}
+      />
 
       {gameState === GameState.ANNOUNCE && currentWinners.length > 0 && (
         <WinnerModal 

@@ -1,17 +1,18 @@
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { generateQuestions, balanceAndPermuteQuestionsText } from '../services/geminiService';
-import { Loader2, Sparkles, Plus, Trash2, Edit2, Save, Users, Upload, Download, FileText, FolderInput, Clock, Shuffle, CheckCircle2 } from 'lucide-react';
+import { Loader2, Sparkles, Plus, Trash2, Edit2, Save, Users, Upload, Download, FileText, FolderInput, Clock, Shuffle, CheckCircle2, Star, List, Search, SlidersHorizontal, ArrowUpToLine, ArrowDownToLine } from 'lucide-react';
 import { ClassData, DEFAULT_STUDENTS, DEFAULT_QUESTIONS } from '../types';
 
 interface ConfigPanelProps {
     rawStudents: string;
     rawQuestions: string;
-    onSave: (students: string, questions: string, timeLimit: number, studentsPerGroup: number, questionsPerTurn: number) => void;
+    onSave: (students: string, questions: string, timeLimit: number, studentsPerGroup: number, questionsPerTurn: number, prioritizedStudents?: string[]) => void;
     onCancel: () => void;
     initialTimeLimit: number;
     initialStudentsPerGroup: number;
     initialQuestionsPerTurn: number;
+    initialPrioritizedStudents?: string[];
 }
 
 const CLASS_6A2_STUDENTS = ``;
@@ -49,7 +50,7 @@ const CLASS_8_QUESTIONS = ``;
 
 const CLASS_9_QUESTIONS = ``;
 
-const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, initialTimeLimit, initialStudentsPerGroup, initialQuestionsPerTurn, onSave, onCancel }) => {
+const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, initialTimeLimit, initialStudentsPerGroup, initialQuestionsPerTurn, initialPrioritizedStudents, onSave, onCancel }) => {
     // Load classes from LocalStorage or init with specific classes
     const [classes, setClasses] = useState<ClassData[]>(() => {
         const saved = localStorage.getItem('wheel_classes');
@@ -154,7 +155,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                 questions: questions,
                 timePerQuestion: 30,
                 studentsPerGroup: 5,
-                questionsPerTurn: 10
+                questionsPerTurn: 10,
+                prioritizedStudents: []
             };
         });
     });
@@ -165,6 +167,44 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
     const [tempTimeLimit, setTempTimeLimit] = useState(initialTimeLimit);
     const [tempStudentsPerGroup, setTempStudentsPerGroup] = useState(initialStudentsPerGroup);
     const [tempQuestionsPerTurn, setTempQuestionsPerTurn] = useState(initialQuestionsPerTurn);
+    const [tempPrioritizedStudents, setTempPrioritizedStudents] = useState<string[]>(() => {
+        const currentClass = classes.find(c => c.id === (classes[0]?.id || ""));
+        return currentClass?.prioritizedStudents || initialPrioritizedStudents || [];
+    });
+    const [studentViewMode, setStudentViewMode] = useState<'table' | 'text'>('table');
+    const [studentSearch, setStudentSearch] = useState<string>('');
+    const [newStudentName, setNewStudentName] = useState<string>('');
+    const [configSliderIndex, setConfigSliderIndex] = useState<number>(1);
+    const configTableRef = useRef<HTMLDivElement>(null);
+
+    const filteredConfigStudents = useMemo(() => {
+        return tempStudents.split('\n').map(s => s.trim()).filter(Boolean)
+            .map((name, idx) => ({ name, originalIndex: idx }))
+            .filter(item => item.name.toLowerCase().includes(studentSearch.toLowerCase().trim()));
+    }, [tempStudents, studentSearch]);
+
+    const handleConfigSliderChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = parseInt(e.target.value, 10);
+        setConfigSliderIndex(val);
+        if (configTableRef.current && filteredConfigStudents.length > 1) {
+            const maxScroll = configTableRef.current.scrollHeight - configTableRef.current.clientHeight;
+            if (maxScroll > 0) {
+                const scrollPercent = (val - 1) / (filteredConfigStudents.length - 1);
+                configTableRef.current.scrollTop = scrollPercent * maxScroll;
+            }
+        }
+    };
+
+    const handleConfigTableScroll = () => {
+        if (!configTableRef.current || filteredConfigStudents.length <= 1) return;
+        const { scrollTop, scrollHeight, clientHeight } = configTableRef.current;
+        const maxScroll = scrollHeight - clientHeight;
+        if (maxScroll <= 0) return;
+        const ratio = Math.min(1, Math.max(0, scrollTop / maxScroll));
+        const idx = Math.round(ratio * (filteredConfigStudents.length - 1)) + 1;
+        setConfigSliderIndex(idx);
+    };
+
     const [aiTopic, setAiTopic] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
     const [showNewClassInput, setShowNewClassInput] = useState(false);
@@ -182,6 +222,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
             setTempTimeLimit(currentClass.timePerQuestion || 30);
             setTempStudentsPerGroup(currentClass.studentsPerGroup || 5);
             setTempQuestionsPerTurn(currentClass.questionsPerTurn || 10);
+            setTempPrioritizedStudents(currentClass.prioritizedStudents || []);
         }
     }, [selectedClassId, classes]);
 
@@ -200,6 +241,43 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
         setClasses(prev => prev.map(c => 
             c.id === selectedClassId ? { ...c, [field]: value } : c
         ));
+    };
+
+    const handleToggleStudentPriority = (name: string) => {
+        setTempPrioritizedStudents(prev => {
+            const next = prev.includes(name) ? prev.filter(n => n !== name) : [...prev, name];
+            setClasses(clsList => clsList.map(c => c.id === selectedClassId ? { ...c, prioritizedStudents: next } : c));
+            return next;
+        });
+    };
+
+    const handleSetAllPriorities = (priority: boolean) => {
+        const sList = tempStudents.split('\n').map(s => s.trim()).filter(Boolean);
+        const next = priority ? [...sList] : [];
+        setTempPrioritizedStudents(next);
+        setClasses(clsList => clsList.map(c => c.id === selectedClassId ? { ...c, prioritizedStudents: next } : c));
+    };
+
+    const handleAddStudent = () => {
+        if (!newStudentName.trim()) return;
+        const name = newStudentName.trim();
+        const updated = tempStudents.trim() ? `${tempStudents.trim()}\n${name}` : name;
+        handleUpdateCurrentClass('students', updated);
+        setNewStudentName('');
+    };
+
+    const handleDeleteStudent = (indexToDelete: number) => {
+        const sList = tempStudents.split('\n').map(s => s.trim()).filter(Boolean);
+        const toDelete = sList[indexToDelete];
+        const updatedList = sList.filter((_, idx) => idx !== indexToDelete);
+        handleUpdateCurrentClass('students', updatedList.join('\n'));
+        if (toDelete && tempPrioritizedStudents.includes(toDelete)) {
+            setTempPrioritizedStudents(prev => prev.filter(n => n !== toDelete));
+            setClasses(clsList => clsList.map(c => c.id === selectedClassId ? { 
+                ...c, 
+                prioritizedStudents: (c.prioritizedStudents || []).filter(n => n !== toDelete) 
+            } : c));
+        }
     };
 
     const handleGenerateAI = async () => {
@@ -255,7 +333,8 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
             questions: "",
             timePerQuestion: 30,
             studentsPerGroup: 5,
-            questionsPerTurn: 10
+            questionsPerTurn: 10,
+            prioritizedStudents: []
         };
         setClasses(prev => [...prev, newClass]);
         setSelectedClassId(newClass.id);
@@ -285,7 +364,10 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
     };
 
     const handleSave = () => {
-        onSave(tempStudents, tempQuestions, tempTimeLimit, tempStudentsPerGroup, tempQuestionsPerTurn);
+        try {
+            localStorage.setItem('wheel_active_class_id', selectedClassId);
+        } catch (e) {}
+        onSave(tempStudents, tempQuestions, tempTimeLimit, tempStudentsPerGroup, tempQuestionsPerTurn, tempPrioritizedStudents);
     };
 
     const handleImportWord = async (e: React.ChangeEvent<HTMLInputElement>, field: 'students' | 'questions') => {
@@ -556,14 +638,42 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                 {/* Students Column */}
                 <div className="flex flex-col h-full">
                     <div className="flex justify-between items-center mb-3">
-                        <label className="text-lg font-bold text-gray-700 flex items-center gap-2">
-                            <Users size={20} />
-                            Danh sách học sinh
-                            <span className="text-sm font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                {tempStudents.split('\n').filter(s => s.trim()).length}
-                            </span>
-                        </label>
-                        <div className="flex gap-2">
+                        <div className="flex items-center gap-2">
+                            <label className="text-lg font-bold text-gray-700 flex items-center gap-2">
+                                <Users size={20} />
+                                Danh sách học sinh
+                                <span className="text-sm font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                                    {tempStudents.split('\n').filter(s => s.trim()).length}
+                                </span>
+                            </label>
+                            {tempPrioritizedStudents.length > 0 && (
+                                <span className="text-xs font-bold bg-amber-100 text-amber-800 px-2.5 py-0.5 rounded-full flex items-center gap-1 border border-amber-200">
+                                    <Star size={12} className="fill-amber-500 text-amber-500" />
+                                    {tempPrioritizedStudents.length} ưu tiên
+                                </span>
+                            )}
+                        </div>
+
+                        <div className="flex items-center gap-1.5">
+                            {/* Toggle Table / Text Mode */}
+                            <button
+                                onClick={() => setStudentViewMode(m => m === 'table' ? 'text' : 'table')}
+                                className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-xs font-bold flex items-center gap-1.5 transition-colors"
+                                title={studentViewMode === 'table' ? 'Chuyển sang dạng soạn văn bản (Textarea)' : 'Chuyển sang dạng bảng có cột tick ưu tiên'}
+                            >
+                                {studentViewMode === 'table' ? (
+                                    <>
+                                        <FileText size={15} />
+                                        <span>Soạn nhanh</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <List size={15} />
+                                        <span>Bảng & Cột tick</span>
+                                    </>
+                                )}
+                            </button>
+
                             <label className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer" title="Nhập từ Word">
                                 <Upload size={18} />
                                 <input type="file" accept=".docx" className="hidden" onChange={(e) => handleImportWord(e, 'students')} />
@@ -576,12 +686,193 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                             </button>
                         </div>
                     </div>
-                    <textarea
-                        className="flex-grow w-full p-4 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-mono text-sm resize-none shadow-inner bg-gray-50"
-                        value={tempStudents}
-                        onChange={(e) => handleUpdateCurrentClass('students', e.target.value)}
-                        placeholder="Nhập tên học sinh, mỗi người một dòng..."
-                    />
+
+                    {studentViewMode === 'table' ? (
+                        <div className="flex-grow flex flex-col bg-white border border-gray-200 rounded-xl overflow-hidden shadow-inner">
+                            {/* Sub toolbar */}
+                            <div className="p-2.5 bg-amber-50/50 border-b border-amber-100 flex items-center justify-between gap-2 text-xs">
+                                <div className="relative flex-1">
+                                    <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input 
+                                        type="text"
+                                        value={studentSearch}
+                                        onChange={(e) => setStudentSearch(e.target.value)}
+                                        placeholder="Tìm học sinh..."
+                                        className="w-full pl-8 pr-2 py-1 bg-white border border-amber-200 rounded-lg text-xs focus:ring-1 focus:ring-amber-500 outline-none"
+                                    />
+                                </div>
+                                <div className="flex gap-1.5 shrink-0">
+                                    <button 
+                                        onClick={() => handleSetAllPriorities(true)}
+                                        className="px-2 py-1 bg-amber-100 hover:bg-amber-200 text-amber-800 rounded font-bold"
+                                        title="Ưu tiên tất cả học sinh trong danh sách"
+                                    >
+                                        Tick tất cả
+                                    </button>
+                                    <button 
+                                        onClick={() => handleSetAllPriorities(false)}
+                                        className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-600 rounded font-bold"
+                                        title="Bỏ tick tất cả"
+                                    >
+                                        Bỏ tick
+                                    </button>
+                                </div>
+                            </div>
+
+                            {/* Thanh trượt duyệt nhanh danh sách học sinh */}
+                            {filteredConfigStudents.length > 3 && (
+                                <div className="px-3 py-1.5 bg-amber-100/70 border-b border-amber-200 flex items-center gap-2 text-xs shrink-0">
+                                    <SlidersHorizontal size={14} className="text-amber-700 shrink-0" />
+                                    <span className="font-bold text-amber-950 shrink-0 text-[11px]">
+                                        Trượt nhanh:
+                                    </span>
+                                    <span className="bg-amber-200 text-amber-950 px-2 py-0.5 rounded-full font-mono font-black text-[10px] shadow-inner">
+                                        {configSliderIndex} / {filteredConfigStudents.length}
+                                    </span>
+                                    {filteredConfigStudents[configSliderIndex - 1] && (
+                                        <span className="text-amber-900 font-bold bg-white/90 px-1.5 py-0.5 rounded border border-amber-300 text-[11px] truncate max-w-[120px]">
+                                            {filteredConfigStudents[configSliderIndex - 1].name}
+                                        </span>
+                                    )}
+                                    <button
+                                        onClick={() => configTableRef.current?.scrollTo({ top: 0, behavior: 'smooth' })}
+                                        className="p-1 hover:bg-amber-200 text-amber-900 rounded transition-colors ml-auto"
+                                        title="Lên đầu danh sách"
+                                    >
+                                        <ArrowUpToLine size={13} />
+                                    </button>
+                                    <input 
+                                        type="range"
+                                        min={1}
+                                        max={Math.max(1, filteredConfigStudents.length)}
+                                        value={configSliderIndex}
+                                        onChange={handleConfigSliderChange}
+                                        className="w-28 sm:w-36 h-2 bg-amber-200 rounded-lg appearance-none cursor-pointer accent-amber-600 shadow-inner"
+                                        title="Kéo thanh trượt để di chuyển nhanh danh sách học sinh"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            if (configTableRef.current) {
+                                                configTableRef.current.scrollTo({ top: configTableRef.current.scrollHeight, behavior: 'smooth' });
+                                            }
+                                        }}
+                                        className="p-1 hover:bg-amber-200 text-amber-900 rounded transition-colors"
+                                        title="Xuống cuối danh sách"
+                                    >
+                                        <ArrowDownToLine size={13} />
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* Table with custom-scrollbar */}
+                            <div 
+                                ref={configTableRef}
+                                onScroll={handleConfigTableScroll}
+                                className="flex-grow overflow-y-auto custom-scrollbar relative"
+                            >
+                                <table className="w-full text-left text-xs">
+                                    <thead className="bg-gray-100 text-gray-700 font-bold uppercase sticky top-0 z-10 border-b border-gray-200 shadow-sm">
+                                        <tr>
+                                            <th className="py-2 px-3 text-center w-14 bg-gray-100">Ưu tiên</th>
+                                            <th className="py-2 px-2 text-center w-10 bg-gray-100">STT</th>
+                                            <th className="py-2 px-3 bg-gray-100">Tên học sinh</th>
+                                            <th className="py-2 px-2 text-center w-24 bg-gray-100">Trọng số</th>
+                                            <th className="py-2 px-2 text-center w-10 bg-gray-100"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100">
+                                        {filteredConfigStudents.map((item, idx) => {
+                                            const isPri = tempPrioritizedStudents.includes(item.name);
+                                            const isHighlighted = idx + 1 === configSliderIndex;
+                                            return (
+                                                <tr 
+                                                    key={item.originalIndex} 
+                                                    onClick={() => handleToggleStudentPriority(item.name)}
+                                                    className={`cursor-pointer transition-colors ${
+                                                        isHighlighted 
+                                                            ? 'ring-2 ring-amber-400 bg-amber-100/90 font-bold' 
+                                                            : isPri 
+                                                                ? 'bg-amber-50 hover:bg-amber-100/70 font-medium' 
+                                                                : 'hover:bg-blue-50/50'
+                                                    }`}
+                                                >
+                                                        <td className="py-2 px-3 text-center">
+                                                            <input 
+                                                                type="checkbox"
+                                                                checked={isPri}
+                                                                onChange={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleToggleStudentPriority(item.name);
+                                                                }}
+                                                                className="w-4 h-4 rounded text-amber-600 focus:ring-amber-500 accent-amber-500 cursor-pointer"
+                                                            />
+                                                        </td>
+                                                        <td className="py-2 px-2 text-center text-gray-400 font-mono">
+                                                            {item.originalIndex + 1}
+                                                        </td>
+                                                        <td className="py-2 px-3 text-gray-800 font-semibold">
+                                                            <div className="flex items-center gap-1.5">
+                                                                {isPri && <Star size={13} className="text-amber-500 fill-amber-400 shrink-0" />}
+                                                                <span>{item.name}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="py-2 px-2 text-center">
+                                                            {isPri ? (
+                                                                <span className="bg-amber-200 text-amber-900 font-black px-1.5 py-0.5 rounded text-[10px]">
+                                                                    Ưu tiên x5 ⭐
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-gray-400 text-[11px]">
+                                                                    Chuẩn x1
+                                                                </span>
+                                                            )}
+                                                        </td>
+                                                        <td className="py-2 px-2 text-center">
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleDeleteStudent(item.originalIndex);
+                                                                }}
+                                                                className="text-gray-400 hover:text-red-600 p-1 rounded"
+                                                                title="Xóa học sinh này"
+                                                            >
+                                                                <Trash2 size={13} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Add student row */}
+                            <div className="p-2 border-t border-gray-200 bg-gray-50 flex gap-2">
+                                <input 
+                                    type="text"
+                                    value={newStudentName}
+                                    onChange={(e) => setNewStudentName(e.target.value)}
+                                    onKeyDown={(e) => { if (e.key === 'Enter') handleAddStudent(); }}
+                                    placeholder="Thêm học sinh mới..."
+                                    className="flex-1 px-3 py-1.5 text-xs border border-gray-300 rounded-lg outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                                />
+                                <button 
+                                    onClick={handleAddStudent}
+                                    className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-bold transition-colors"
+                                >
+                                    Thêm
+                                </button>
+                            </div>
+                        </div>
+                    ) : (
+                        <textarea
+                            className="flex-grow w-full p-4 border border-gray-300 rounded-xl focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all font-mono text-sm resize-none shadow-inner bg-gray-50"
+                            value={tempStudents}
+                            onChange={(e) => handleUpdateCurrentClass('students', e.target.value)}
+                            placeholder="Nhập tên học sinh, mỗi người một dòng..."
+                        />
+                    )}
                 </div>
 
                 {/* Questions Column */}

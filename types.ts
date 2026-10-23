@@ -3,6 +3,8 @@ export interface Student {
     id: string;
     name: string;
     selected: boolean;
+    priority?: boolean; // Tăng trọng số ưu tiên khi quay (dành cho học sinh ít được chọn)
+    weight?: number;    // Trọng số (mặc định 1 nếu không ưu tiên, 5 nếu ưu tiên)
 }
 
 export interface Question {
@@ -27,6 +29,7 @@ export interface ClassData {
     timePerQuestion: number;
     studentsPerGroup?: number;
     questionsPerTurn?: number;
+    prioritizedStudents?: string[]; // Danh sách tên học sinh được ưu tiên
 }
 
 export enum GameState {

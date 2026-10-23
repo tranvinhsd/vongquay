@@ -123,7 +123,7 @@ const Wheel: React.FC<WheelProps> = ({ students, mustSpin, prizeNumber, onStopSp
                 <text
                     x={textX}
                     y={textY}
-                    fill="white"
+                    fill={student.priority ? "#FFFB90" : "white"}
                     fontSize={fontSize}
                     fontWeight="bold"
                     textAnchor="middle"
@@ -131,7 +131,7 @@ const Wheel: React.FC<WheelProps> = ({ students, mustSpin, prizeNumber, onStopSp
                     transform={`rotate(${textAngle}, ${textX}, ${textY})`}
                     style={{ pointerEvents: 'none' }}
                 >
-                    {student.name.length > 8 ? student.name.substring(0, 6) + '..' : student.name}
+                    {student.priority ? `⭐${student.name.length > 7 ? student.name.substring(0, 5) + '..' : student.name}` : (student.name.length > 8 ? student.name.substring(0, 6) + '..' : student.name)}
                 </text>
             </g>
         );
