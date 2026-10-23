@@ -6,7 +6,7 @@ import HistoryModal from './components/HistoryModal';
 import WinnerModal from './components/WinnerModal';
 import StudentListModal from './components/StudentListModal';
 import { Student, Question, GameState, HistoryRecord, DEFAULT_STUDENTS, DEFAULT_QUESTIONS, QUESTIONS_PER_TURN } from './types';
-import { Settings, RefreshCw, Trophy, History, Users, Star } from 'lucide-react';
+import { Settings, RefreshCw, Trophy, History, Users, User, Star } from 'lucide-react';
 
 const App: React.FC = () => {
   const [gameState, setGameState] = useState<GameState>(GameState.IDLE);
@@ -96,7 +96,10 @@ const App: React.FC = () => {
   const handleSpin = () => {
     if (gameState !== GameState.IDLE || availableStudents.length < studentsPerGroup) {
         if (availableStudents.length < studentsPerGroup && availableStudents.length > 0) {
-            alert(`Chỉ còn ${availableStudents.length} học sinh, không đủ tạo nhóm ${studentsPerGroup} người. Vui lòng reset.`);
+            alert(studentsPerGroup === 1 
+                ? 'Không còn học sinh nào để quay. Vui lòng reset danh sách.' 
+                : `Chỉ còn ${availableStudents.length} học sinh, không đủ tạo nhóm ${studentsPerGroup} người. Vui lòng reset.`
+            );
         }
         return;
     }
@@ -310,8 +313,16 @@ const App: React.FC = () => {
         
         {availableStudents.length < studentsPerGroup ? (
             <div className="text-center p-12 bg-white rounded-3xl shadow-xl border-4 border-dashed border-gray-300 animate-fade-in z-20 max-w-lg">
-                <Users size={48} className="mx-auto text-gray-400 mb-4" />
-                <p className="text-2xl text-gray-500 mb-4 font-bold">Cần ít nhất {studentsPerGroup} học sinh để tiếp tục lượt quay nhóm!</p>
+                {studentsPerGroup === 1 ? (
+                    <User size={48} className="mx-auto text-gray-400 mb-4" />
+                ) : (
+                    <Users size={48} className="mx-auto text-gray-400 mb-4" />
+                )}
+                <p className="text-2xl text-gray-500 mb-4 font-bold">
+                    {studentsPerGroup === 1 
+                        ? 'Đã quay hết học sinh! Vui lòng làm mới danh sách.' 
+                        : `Cần ít nhất ${studentsPerGroup} học sinh để tiếp tục lượt quay nhóm!`}
+                </p>
                 <div className="flex flex-col gap-3">
                     <button 
                         onClick={handleReset}
@@ -340,9 +351,22 @@ const App: React.FC = () => {
 
                 <div className="flex-1 w-full flex flex-col items-center md:items-start justify-center gap-6">
                     <div className="bg-white/80 backdrop-blur p-6 rounded-3xl shadow-xl border-2 border-blue-100 text-center md:text-left animate-float">
-                        <h3 className="text-blue-900 font-bold text-xl mb-1">Chế độ Nhóm</h3>
+                        <div className="flex items-center gap-2 justify-center md:justify-start mb-1">
+                            {studentsPerGroup === 1 ? (
+                                <User size={22} className="text-blue-700" />
+                            ) : (
+                                <Users size={22} className="text-blue-700" />
+                            )}
+                            <h3 className="text-blue-900 font-bold text-xl">
+                                {studentsPerGroup === 1 ? 'Chế độ cá nhân' : 'Chế độ Nhóm'}
+                            </h3>
+                        </div>
                         <p className="text-gray-600 text-sm">
-                          Hệ thống sẽ chọn ngẫu nhiên <span className="font-bold text-red-500 text-lg">{studentsPerGroup} bạn</span> và <span className="font-bold text-blue-600 text-lg">{questionsPerTurn} câu hỏi</span>
+                            {studentsPerGroup === 1 ? (
+                                <>Hệ thống sẽ chọn ngẫu nhiên <span className="font-bold text-red-500 text-lg">1 bạn</span> và <span className="font-bold text-blue-600 text-lg">{questionsPerTurn} câu hỏi</span></>
+                            ) : (
+                                <>Hệ thống sẽ chọn ngẫu nhiên <span className="font-bold text-red-500 text-lg">{studentsPerGroup} bạn</span> và <span className="font-bold text-blue-600 text-lg">{questionsPerTurn} câu hỏi</span></>
+                            )}
                         </p>
                         {prioritizedAvailableCount > 0 && (
                           <p className="text-amber-800 text-xs font-semibold mt-1 flex items-center gap-1 justify-center md:justify-start">
@@ -363,7 +387,9 @@ const App: React.FC = () => {
                                 : 'bg-gradient-to-b from-blue-500 to-blue-700 hover:from-blue-400 hover:to-blue-600'}
                         `}
                     >
-                        {mustSpin ? 'Đang chọn nhóm...' : `QUAY NHÓM ${studentsPerGroup}`}
+                        {mustSpin 
+                            ? (studentsPerGroup === 1 ? 'Đang chọn học sinh...' : 'Đang chọn nhóm...') 
+                            : (studentsPerGroup === 1 ? 'QUAY CÁ NHÂN' : `QUAY NHÓM ${studentsPerGroup}`)}
                     </button>
                     <div className="text-gray-500 text-sm font-bold italic opacity-70 bg-white/50 px-10 py-1 rounded-full backdrop-blur-sm shadow-sm">
                         Được chia sẻ bởi TRANVINHSD

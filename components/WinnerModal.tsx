@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { PartyPopper, Play, Star, XCircle, Users } from 'lucide-react';
+import { PartyPopper, Play, Star, XCircle, Users, User } from 'lucide-react';
 
 interface WinnerModalProps {
     studentNames: string[];
@@ -10,6 +10,8 @@ interface WinnerModalProps {
 }
 
 const WinnerModal: React.FC<WinnerModalProps> = ({ studentNames, questionsCount, onStart, onSkip }) => {
+    const isSingle = studentNames.length === 1;
+
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-md animate-fade-in">
             <div className="relative bg-white rounded-[2.5rem] shadow-2xl w-full max-w-4xl p-10 text-center animate-bounce-in border-4 border-blue-400 overflow-hidden">
@@ -22,11 +24,22 @@ const WinnerModal: React.FC<WinnerModalProps> = ({ studentNames, questionsCount,
 
                 <div className="relative z-10 flex flex-col items-center">
                     <div className="mb-6 bg-blue-100 p-6 rounded-full inline-flex items-center justify-center shadow-inner">
-                        <Users className="w-16 h-16 text-blue-600 animate-bounce" />
+                        {isSingle ? (
+                            <User className="w-16 h-16 text-blue-600 animate-bounce" />
+                        ) : (
+                            <Users className="w-16 h-16 text-blue-600 animate-bounce" />
+                        )}
                     </div>
                     
-                    <h2 className="text-3xl font-black text-blue-900 mb-2 uppercase tracking-widest">Nhóm May Mắn</h2>
-                    <p className="text-gray-500 mb-8 font-bold">{studentNames.length} học sinh sau đây sẽ cùng tham gia thử thách {questionsCount} câu hỏi!</p>
+                    <h2 className="text-3xl font-black text-blue-900 mb-2 uppercase tracking-widest">
+                        {isSingle ? 'Chế độ cá nhân' : 'Nhóm May Mắn'}
+                    </h2>
+                    <p className="text-gray-500 mb-8 font-bold">
+                        {isSingle 
+                            ? `Học sinh may mắn sau đây sẽ tham gia thử thách ${questionsCount} câu hỏi!` 
+                            : `${studentNames.length} học sinh sau đây sẽ cùng tham gia thử thách ${questionsCount} câu hỏi!`
+                        }
+                    </p>
                     
                     <div className="flex flex-wrap justify-center gap-4 mb-10 w-full">
                         {studentNames.map((name, index) => (

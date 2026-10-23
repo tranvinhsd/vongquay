@@ -103,7 +103,10 @@ const StudentListModal: React.FC<StudentListModalProps> = ({
                                 Danh Sách Học Sinh & Cột Ưu Tiên Quay
                             </h2>
                             <p className="text-amber-100 text-sm font-medium">
-                                Tick chọn học sinh ít được chọn trúng để tăng trọng số ưu tiên khi quay vòng nhóm {studentsPerGroup} bạn
+                                {studentsPerGroup === 1 
+                                    ? 'Tick chọn học sinh ít được chọn trúng để tăng trọng số ưu tiên khi quay vòng ở Chế độ cá nhân'
+                                    : `Tick chọn học sinh ít được chọn trúng để tăng trọng số ưu tiên khi quay vòng nhóm ${studentsPerGroup} bạn`
+                                }
                             </p>
                         </div>
                     </div>
@@ -332,7 +335,7 @@ const StudentListModal: React.FC<StudentListModalProps> = ({
                 <div className="p-4 bg-white border-t border-gray-200 flex flex-col sm:flex-row items-center justify-between gap-4 shrink-0">
                     <div className="text-xs text-gray-500 flex items-center gap-2">
                         <span className="font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded-full">💡 Mẹo sư phạm:</span>
-                        <span>Những học sinh được tick (⭐) có xác suất trúng cao gấp 5 lần khi quay nhóm để các em ít được gọi có cơ hội tham gia.</span>
+                        <span>Những học sinh được tick (⭐) có xác suất trúng cao gấp 5 lần khi quay {studentsPerGroup === 1 ? 'cá nhân' : 'nhóm'} để các em ít được gọi có cơ hội tham gia.</span>
                     </div>
 
                     <button

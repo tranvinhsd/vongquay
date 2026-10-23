@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { generateQuestions, balanceAndPermuteQuestionsText } from '../services/geminiService';
-import { Loader2, Sparkles, Plus, Trash2, Edit2, Save, Users, Upload, Download, FileText, FolderInput, Clock, Shuffle, CheckCircle2, Star, List, Search, SlidersHorizontal, ArrowUpToLine, ArrowDownToLine } from 'lucide-react';
+import { Loader2, Sparkles, Plus, Trash2, Edit2, Save, Users, User, Upload, Download, FileText, FolderInput, Clock, Shuffle, CheckCircle2, Star, List, Search, SlidersHorizontal, ArrowUpToLine, ArrowDownToLine } from 'lucide-react';
 import { ClassData, DEFAULT_STUDENTS, DEFAULT_QUESTIONS } from '../types';
 
 interface ConfigPanelProps {
@@ -559,14 +559,14 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
 
                     {/* Students Per Group Setting */}
                     <div className="flex items-center gap-2 px-3 py-1 bg-green-50 text-green-700 rounded-lg border border-green-100">
-                        <Users size={18} />
-                        <span className="text-xs font-bold uppercase">HS/Nhóm:</span>
+                        {tempStudentsPerGroup === 1 ? <User size={18} /> : <Users size={18} />}
+                        <span className="text-xs font-bold uppercase">{tempStudentsPerGroup === 1 ? 'Chế độ cá nhân (1 HS):' : 'HS/Nhóm:'}</span>
                         <input 
                             type="number"
                             min="1"
                             max="20"
                             value={tempStudentsPerGroup}
-                            onChange={(e) => handleUpdateCurrentClass('studentsPerGroup', parseInt(e.target.value) || 5)}
+                            onChange={(e) => handleUpdateCurrentClass('studentsPerGroup', parseInt(e.target.value) || 1)}
                             className="w-14 p-1 rounded border-green-200 text-center font-bold text-green-800 bg-white"
                         />
                     </div>

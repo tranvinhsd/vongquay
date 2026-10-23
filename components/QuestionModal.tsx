@@ -1,17 +1,18 @@
 
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { soundFX } from '../utils/sound';
-import { Check, X, ArrowRight, Trophy, Clock, Users } from 'lucide-react';
+import { Check, X, ArrowRight, Trophy, Clock, Users, User } from 'lucide-react';
 import { Question, POINTS_PER_QUESTION, QUESTIONS_PER_TURN } from '../types';
 
 interface QuestionModalProps {
-    studentName: string; // Tên của cả nhóm
+    studentName: string; // Tên của cả nhóm hoặc cá nhân
     questions: Question[];
     timeLimit: number;
     onFinish: (score: number) => void;
 }
 
 const QuestionModal: React.FC<QuestionModalProps> = ({ studentName, questions, timeLimit, onFinish }) => {
+    const isSingle = !studentName.includes(',');
     const [currentIndex, setCurrentIndex] = useState(0);
     const [score, setScore] = useState(0);
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
@@ -132,14 +133,20 @@ const QuestionModal: React.FC<QuestionModalProps> = ({ studentName, questions, t
                             <Trophy size={48} />
                         </div>
                     </div>
-                    <h2 className="text-3xl font-extrabold text-gray-800 mb-2">Hoàn thành thử thách nhóm!</h2>
+                    <h2 className="text-3xl font-extrabold text-gray-800 mb-2">
+                        {isSingle ? 'Hoàn thành thử thách cá nhân!' : 'Hoàn thành thử thách nhóm!'}
+                    </h2>
                     <div className="bg-blue-50 p-4 rounded-xl mb-6">
-                        <p className="text-gray-500 text-sm uppercase font-bold mb-2">Thành viên nhóm:</p>
+                        <p className="text-gray-500 text-sm uppercase font-bold mb-2">
+                            {isSingle ? 'Học sinh tham gia:' : 'Thành viên nhóm:'}
+                        </p>
                         <p className="font-bold text-blue-700">{studentName}</p>
                     </div>
                     
                     <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 rounded-2xl mb-8 shadow-lg">
-                        <p className="text-sm uppercase font-bold opacity-80 mb-1">Điểm nhóm đạt được</p>
+                        <p className="text-sm uppercase font-bold opacity-80 mb-1">
+                            {isSingle ? 'Điểm cá nhân đạt được' : 'Điểm nhóm đạt được'}
+                        </p>
                         <p className="text-7xl font-black">{score} <span className="text-3xl font-normal">/ {questions.length}</span></p>
                     </div>
 
@@ -174,8 +181,8 @@ const QuestionModal: React.FC<QuestionModalProps> = ({ studentName, questions, t
                             Câu {currentIndex + 1} / {questions.length}
                         </div>
                         <div className="flex items-center gap-2 text-xl font-medium opacity-90 truncate max-w-md">
-                            <Users size={20} />
-                            Nhóm: {studentName}
+                            {isSingle ? <User size={20} /> : <Users size={20} />}
+                            {isSingle ? `Học sinh: ${studentName}` : `Nhóm: ${studentName}`}
                         </div>
                     </div>
 
@@ -213,7 +220,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({ studentName, questions, t
 
                     {isChecked && selectedOption === null && timeLeft === 0 && (
                         <div className="mt-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-center font-bold text-xl">
-                            Hết thời gian! Nhóm đã bỏ lỡ câu hỏi này.
+                            {isSingle ? 'Hết thời gian! Bạn đã bỏ lỡ câu hỏi này.' : 'Hết thời gian! Nhóm đã bỏ lỡ câu hỏi này.'}
                         </div>
                     )}
                 </div>
