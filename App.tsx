@@ -142,14 +142,16 @@ const App: React.FC = () => {
     setCurrentQuestions([]);
   };
 
-  const handleModalResult = (score: number) => {
+  const handleModalResult = (score: number, correctCount?: number) => {
     if (currentWinners.length > 0) {
         const groupNames = currentWinners.map(s => s.name).join(', ');
+        const total = currentQuestions.length;
         const newRecord: HistoryRecord = {
             id: Date.now().toString(),
             studentName: groupNames,
             score: score,
-            totalQuestions: currentQuestions.length,
+            correctCount: correctCount !== undefined ? correctCount : Math.round((score / 10) * total),
+            totalQuestions: total,
             timestamp: Date.now()
         };
         setHistory(prev => [newRecord, ...prev]);

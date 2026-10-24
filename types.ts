@@ -16,7 +16,8 @@ export interface Question {
 export interface HistoryRecord {
     id: string;
     studentName: string; // Sẽ lưu danh sách tên nhóm cách nhau bởi dấu phẩy
-    score: number;
+    score: number; // Điểm quy đổi theo thang điểm 10 (làm tròn đến 0.5)
+    correctCount?: number; // Số câu trả lời đúng
     totalQuestions: number;
     timestamp: number;
 }

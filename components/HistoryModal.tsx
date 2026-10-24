@@ -31,19 +31,24 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose }) => {
 
             // 1. Prepare data
             const dataToExport = history.map((record, index) => {
-                const maxScore = (record.totalQuestions || QUESTIONS_PER_TURN) * POINTS_PER_QUESTION;
-                const percentage = (record.score / maxScore) * 100;
+                const score10 = record.score;
                 let rating = "Cần cố gắng";
-                if (percentage === 100) rating = "Xuất sắc";
-                else if(percentage>=80) rating="Loại Khá"
-                else if (percentage >= 50) rating = "Đạt";
-            
+                if (score10 >= 9) rating = "Xuất sắc";
+                else if (score10 >= 8) rating = "Giỏi";
+                else if (score10 >= 6.5) rating = "Khá";
+                else if (score10 >= 5) rating = "Đạt";
+                
+                const correct = record.correctCount !== undefined 
+                    ? record.correctCount 
+                    : Math.round((record.score / 10) * record.totalQuestions);
+
                 return {
                     "STT": index + 1,
                     "Thời gian": new Date(record.timestamp).toLocaleString('vi-VN'),
-                    "Học sinh": record.studentName,
-                    "Điểm số": record.score,
-                    "Tổng điểm tối đa": maxScore,
+                    "Học sinh / Nhóm": record.studentName,
+                    "Điểm (Thang 10)": record.score,
+                    "Số câu đúng": `${correct}/${record.totalQuestions}`,
+                    "Thang điểm": 10,
                     "Đánh giá": rating
                 };
             });
@@ -55,9 +60,10 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose }) => {
             const wscols = [
                 { wch: 5 },  // STT
                 { wch: 20 }, // Time
-                { wch: 25 }, // Name
-                { wch: 10 }, // Score
-                { wch: 15 }, // Max Score
+                { wch: 28 }, // Name
+                { wch: 16 }, // Score
+                { wch: 14 }, // Correct count
+                { wch: 12 }, // Max scale
                 { wch: 15 }  // Rating
             ];
             worksheet['!cols'] = wscols;
@@ -119,15 +125,18 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose }) => {
                                 <thead className="bg-gray-50">
                                     <tr>
                                         <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Thời gian</th>
-                                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Học sinh</th>
-                                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Điểm số</th>
+                                        <th className="px-6 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Học sinh / Nhóm</th>
+                                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Điểm (Thang 10)</th>
+                                        <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Số câu đúng</th>
                                         <th className="px-6 py-3 text-center text-xs font-bold text-gray-500 uppercase tracking-wider">Kết quả</th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-200">
                                     {history.map((record) => {
-                                        const maxScore = (record.totalQuestions || QUESTIONS_PER_TURN) * POINTS_PER_QUESTION;
-                                        const percentage = (record.score / maxScore) * 100;
+                                        const score10 = record.score;
+                                        const correct = record.correctCount !== undefined 
+                                            ? record.correctCount 
+                                            : Math.round((record.score / 10) * record.totalQuestions);
                                         
                                         return (
                                             <tr key={record.id} className="hover:bg-gray-50 transition-colors">
@@ -138,20 +147,33 @@ const HistoryModal: React.FC<HistoryModalProps> = ({ history, onClose }) => {
                                                     {record.studentName}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                    <span className="text-xl font-bold text-blue-600">{record.score}</span>
-                                                    <span className="text-xs text-gray-400">/{maxScore}</span>
+                                                    <span className="text-2xl font-black text-blue-700">{score10}</span>
+                                                    <span className="text-xs text-gray-400 font-bold"> / 10</span>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-center">
-                                                    {percentage === 100 ? (
-                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-700">
-                                                            <Trophy size={14} /> Xuất sắc
+                                                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 text-xs font-bold">
+                                                        {correct} / {record.totalQuestions} câu
+                                                    </span>
+                                                </td>
+                                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                    {score10 >= 9 ? (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-yellow-100 text-yellow-800 border border-yellow-200">
+                                                            <Trophy size={14} className="fill-yellow-500 text-yellow-600" /> Xuất sắc
                                                         </span>
-                                                    ) : percentage >= 50 ? (
-                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
+                                                    ) : score10 >= 8 ? (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                                            Giỏi
+                                                        </span>
+                                                    ) : score10 >= 6.5 ? (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-blue-100 text-blue-800 border border-blue-200">
+                                                            Khá
+                                                        </span>
+                                                    ) : score10 >= 5 ? (
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-700 border border-gray-200">
                                                             Đạt
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700">
+                                                        <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-bold bg-red-100 text-red-700 border border-red-200">
                                                             Cần cố gắng
                                                         </span>
                                                     )}

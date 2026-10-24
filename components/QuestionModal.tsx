@@ -8,16 +8,25 @@ interface QuestionModalProps {
     studentName: string; // Tên của cả nhóm hoặc cá nhân
     questions: Question[];
     timeLimit: number;
-    onFinish: (score: number) => void;
+    onFinish: (score: number, correctCount?: number) => void;
 }
 
 const QuestionModal: React.FC<QuestionModalProps> = ({ studentName, questions, timeLimit, onFinish }) => {
     const isSingle = !studentName.includes(',');
     const [currentIndex, setCurrentIndex] = useState(0);
-    const [score, setScore] = useState(0);
+    const [correctCount, setCorrectCount] = useState(0);
     const [selectedOption, setSelectedOption] = useState<string | null>(null);
     const [isChecked, setIsChecked] = useState(false);
     const [isQuizFinished, setIsQuizFinished] = useState(false);
+
+    // Căn cứ số câu đúng / tổng số câu hỏi để quy ra thang điểm 10, làm tròn đến 0,5 điểm
+    const { rawScore, finalScore } = useMemo(() => {
+        const total = questions.length;
+        if (total === 0) return { rawScore: 0, finalScore: 0 };
+        const raw = (correctCount / total) * 10;
+        const rounded = Math.round(raw * 2) / 2;
+        return { rawScore: raw, finalScore: rounded };
+    }, [correctCount, questions.length]);
     
     const [timeLeft, setTimeLeft] = useState(timeLimit);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -87,7 +96,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({ studentName, questions, t
         const isCorrect = selectedOption === correctLetter;
         if (isCorrect) {
             soundFX.playCorrectSound();
-            setScore(prev => prev + POINTS_PER_QUESTION);
+            setCorrectCount(prev => prev + 1);
         } else {
             soundFX.playWrongSound();
         }
@@ -105,7 +114,7 @@ const QuestionModal: React.FC<QuestionModalProps> = ({ studentName, questions, t
         }
     };
 
-    const handleClose = () => onFinish(score);
+    const handleClose = () => onFinish(finalScore, correctCount);
 
     const getOptionStyle = (optText: string) => {
         const match = optText.match(/^([A-D])\./i);
@@ -144,17 +153,30 @@ const QuestionModal: React.FC<QuestionModalProps> = ({ studentName, questions, t
                     </div>
                     
                     <div className="bg-gradient-to-r from-blue-600 to-indigo-700 text-white p-6 rounded-2xl mb-8 shadow-lg">
-                        <p className="text-sm uppercase font-bold opacity-80 mb-1">
-                            {isSingle ? 'Điểm cá nhân đạt được' : 'Điểm nhóm đạt được'}
+                        <p className="text-xs uppercase font-bold tracking-wider opacity-90 mb-1">
+                            {isSingle ? 'Điểm cá nhân (Thang điểm 10)' : 'Điểm nhóm (Thang điểm 10)'}
                         </p>
-                        <p className="text-7xl font-black">{score} <span className="text-3xl font-normal">/ {questions.length}</span></p>
+                        <div className="flex items-baseline justify-center gap-2 my-1">
+                            <span className="text-7xl font-black tracking-tight">{finalScore}</span>
+                            <span className="text-3xl font-bold opacity-80">/ 10</span>
+                        </div>
+                        
+                        <div className="mt-4 flex flex-col sm:flex-row items-center justify-center gap-2 text-xs sm:text-sm font-semibold">
+                            <span className="bg-white/20 backdrop-blur-sm px-3.5 py-1.5 rounded-full">
+                                ✓ Trả lời đúng: {correctCount} / {questions.length} câu
+                            </span>
+                            <span className="bg-white/20 backdrop-blur-sm px-3.5 py-1.5 rounded-full">
+                                Quy đổi: ({correctCount}/{questions.length}) × 10 = {rawScore.toFixed(2)} → làm tròn 0,5: <strong className="text-yellow-300 font-black">{finalScore}</strong>
+                            </span>
+                        </div>
                     </div>
 
                     <button 
                         onClick={handleClose}
-                        className="w-full py-4 bg-green-500 text-white rounded-xl font-bold text-3xl hover:bg-green-600 transition-colors shadow-lg active:scale-95"
+                        className="w-full py-4 bg-green-500 text-white rounded-xl font-bold text-2xl hover:bg-green-600 transition-colors shadow-lg active:scale-95 flex items-center justify-center gap-2"
                     >
-                        Lưu kết quả & Tiếp tục
+                        <Check size={28} />
+                        Lưu kết quả ({finalScore} điểm) & Tiếp tục
                     </button>
                 </div>
             </div>
@@ -195,8 +217,9 @@ const QuestionModal: React.FC<QuestionModalProps> = ({ studentName, questions, t
                                 {timeLeft}s
                             </div>
                         )}
-                        <div className="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-lg font-bold shadow-sm">
-                            Điểm: {score}
+                        <div className="bg-yellow-400 text-yellow-900 px-4 py-2 rounded-lg font-bold shadow-sm flex items-center gap-1.5">
+                            <Check size={18} className="stroke-[3]" />
+                            <span>Đúng: {correctCount}/{questions.length}</span>
                         </div>
                     </div>
                 </div>
