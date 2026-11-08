@@ -238,10 +238,8 @@ const App: React.FC = () => {
   };
 
   const handleReset = () => {
-    if (window.confirm("Bạn có chắc muốn đặt lại trạng thái đã quay của tất cả học sinh và câu hỏi?")) {
-        setAllStudents(prev => prev.map(s => ({ ...s, selected: false })));
-        setAllQuestions(prev => prev.map(q => ({ ...q, used: false })));
-    }
+    setAllStudents(prev => prev.map(s => ({ ...s, selected: false })));
+    setAllQuestions(prev => prev.map(q => ({ ...q, used: false })));
   };
 
   if (gameState === GameState.CONFIG) {

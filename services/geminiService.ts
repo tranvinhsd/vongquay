@@ -200,10 +200,24 @@ export function balanceAndPermuteQuestions(
         }
     }
 
+    // Đánh giá độ chênh lệch độ dài giữa các phương án trong từng câu
+    // Câu có độ dài các phương án đồng đều hơn sẽ được ưu tiên chọn trước
+    const scoredQuestions = parsedQuestions.map(q => {
+        const lengths = q.options.map(opt => opt.trim().length);
+        const maxLen = Math.max(...lengths);
+        const minLen = Math.min(...lengths);
+        const charDiscrepancy = maxLen - minLen;
+        const ratio = minLen > 0 ? maxLen / minLen : 999;
+        return { q, charDiscrepancy, ratio };
+    });
+
+    // Sắp xếp ưu tiên các câu có độ dài các phương án cân đối nhất (ít chênh lệch)
+    scoredQuestions.sort((a, b) => a.charDiscrepancy - b.charDiscrepancy);
+
     // Giới hạn số lượng nếu có targetCount
     const selectedQuestions = targetCount && targetCount > 0 
-        ? parsedQuestions.slice(0, targetCount) 
-        : parsedQuestions;
+        ? scoredQuestions.slice(0, targetCount).map(item => item.q) 
+        : scoredQuestions.map(item => item.q);
 
     const n = selectedQuestions.length;
     if (n === 0) {
@@ -329,9 +343,13 @@ Hãy tạo danh sách gồm ĐÚNG ${requestCount} câu hỏi trắc nghiệm v�
 
 YÊU CẦU KIỂM TRA CHẤT LƯỢNG NGHIÊM NGẶT TRƯỚC KHI XUẤT:
 1. Nội dung câu hỏi: rõ ràng, ngắn gọn, chuẩn xác về mặt kiến thức, đúng thuần phong mỹ tục và sư phạm.
-2. Phương án trả lời: mỗi câu hỏi BẮT BUỘC có ĐÚNG 4 phương án A, B, C, D riêng biệt, không được trùng lặp nội dung.
-3. Đáp án đúng: mỗi câu hỏi CHỈ CÓ DUY NHẤT 1 phương án chính xác tuyệt đối. Ghi rõ ràng ở dòng đáp án.
-4. Đảm bảo phân bổ đều các đáp án A, B, C, D.
+2. CÂN ĐỐI ĐỘ DÀI CÁC PHƯƠNG ÁN (RẤT QUAN TRỌNG):
+   - Thay đổi cách dùng từ, câu chữ sao cho 4 phương án A, B, C, D trong cùng một câu hỏi có ĐỘ DÀI TƯƠNG ĐƯƠNG NHAU, số từ và số ký tự không chênh lệch nhau nhiều.
+   - Tránh tuyệt đối tình trạng một phương án (đặc biệt là phương án đúng hoặc phương án giải thích) quá dài hoặc quá ngắn so với các phương án còn lại.
+   - Cả 4 phương án phải có cùng cấu trúc ngữ pháp (cùng là danh từ, cụm danh từ, cụm động từ hoặc câu hoàn chỉnh).
+3. Phương án trả lời: mỗi câu hỏi BẮT BUỘC có ĐÚNG 4 phương án A, B, C, D riêng biệt, có tính hợp lý và gây nhiễu tốt, không được trùng lặp nội dung.
+4. Đáp án đúng: mỗi câu hỏi CHỈ CÓ DUY NHẤT 1 phương án chính xác tuyệt đối. Ghi rõ ràng ở dòng đáp án.
+5. Đảm bảo phân bổ đều các đáp án A, B, C, D.
 
 Định dạng BẮT BUỘC cho mỗi câu hỏi như sau (không dùng định dạng Markdown, không in đậm, không thêm số lạ):
 
@@ -350,7 +368,7 @@ LƯU Ý QUAN TRỌNG:
 ---
 ${existingContext || "Chưa có câu hỏi nào."}
 ---
-Hãy tạo các câu hỏi chất lượng cao, đa dạng và sáng tạo!`;
+Hãy tạo các câu hỏi chất lượng cao, độ dài các phương án đồng đều và cân đối!`;
         
         const response = await ai.models.generateContent({
             model: 'gemini-3.1-flash-lite-preview',

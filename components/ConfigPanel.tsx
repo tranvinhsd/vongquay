@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { generateQuestions, balanceAndPermuteQuestionsText } from '../services/geminiService';
-import { Loader2, Sparkles, Plus, Trash2, Edit2, Save, Users, User, Upload, Download, FileText, FolderInput, Clock, Shuffle, CheckCircle2, Star, List, Search, SlidersHorizontal, ArrowUpToLine, ArrowDownToLine } from 'lucide-react';
+import { Loader2, Sparkles, Plus, Trash2, Edit2, Save, Users, User, Upload, Download, FileText, FolderInput, Clock, Shuffle, CheckCircle2, Star, List, Search, SlidersHorizontal, ArrowUpToLine, ArrowDownToLine, X, AlertCircle, Check } from 'lucide-react';
 import { ClassData, DEFAULT_STUDENTS, DEFAULT_QUESTIONS } from '../types';
 
 interface ConfigPanelProps {
@@ -161,21 +161,44 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
         });
     });
 
-    const [selectedClassId, setSelectedClassId] = useState<string>(classes[0]?.id || "");
-    const [tempStudents, setTempStudents] = useState(rawStudents);
-    const [tempQuestions, setTempQuestions] = useState(rawQuestions);
-    const [tempTimeLimit, setTempTimeLimit] = useState(initialTimeLimit);
-    const [tempStudentsPerGroup, setTempStudentsPerGroup] = useState(initialStudentsPerGroup);
-    const [tempQuestionsPerTurn, setTempQuestionsPerTurn] = useState(initialQuestionsPerTurn);
+    const [selectedClassId, setSelectedClassId] = useState<string>(() => {
+        try {
+            const activeId = localStorage.getItem('wheel_active_class_id');
+            if (activeId && classes.some(c => c.id === activeId)) {
+                return activeId;
+            }
+        } catch (e) {}
+        return classes[0]?.id || "";
+    });
+
+    const activeInitialClass = classes.find(c => c.id === selectedClassId) || classes[0];
+    const [tempStudents, setTempStudents] = useState(() => activeInitialClass ? activeInitialClass.students : rawStudents);
+    const [tempQuestions, setTempQuestions] = useState(() => activeInitialClass ? activeInitialClass.questions : rawQuestions);
+    const [tempTimeLimit, setTempTimeLimit] = useState(() => activeInitialClass?.timePerQuestion || initialTimeLimit);
+    const [tempStudentsPerGroup, setTempStudentsPerGroup] = useState(() => activeInitialClass?.studentsPerGroup || initialStudentsPerGroup);
+    const [tempQuestionsPerTurn, setTempQuestionsPerTurn] = useState(() => activeInitialClass?.questionsPerTurn || initialQuestionsPerTurn);
     const [tempPrioritizedStudents, setTempPrioritizedStudents] = useState<string[]>(() => {
-        const currentClass = classes.find(c => c.id === (classes[0]?.id || ""));
-        return currentClass?.prioritizedStudents || initialPrioritizedStudents || [];
+        return activeInitialClass?.prioritizedStudents || initialPrioritizedStudents || [];
     });
     const [studentViewMode, setStudentViewMode] = useState<'table' | 'text'>('table');
     const [studentSearch, setStudentSearch] = useState<string>('');
     const [newStudentName, setNewStudentName] = useState<string>('');
     const [configSliderIndex, setConfigSliderIndex] = useState<number>(1);
     const configTableRef = useRef<HTMLDivElement>(null);
+
+    // States for custom in-UI confirmation and notifications (avoiding blocked window.confirm/alert)
+    const [confirmDeleteQuestions, setConfirmDeleteQuestions] = useState(false);
+    const [confirmDeleteClass, setConfirmDeleteClass] = useState(false);
+    const [showRenameInput, setShowRenameInput] = useState(false);
+    const [renameValue, setRenameValue] = useState("");
+    const [toast, setToast] = useState<{ message: string; type?: 'info' | 'success' | 'error' } | null>(null);
+
+    const showToast = (message: string, type: 'info' | 'success' | 'error' = 'info') => {
+        setToast({ message, type });
+        setTimeout(() => {
+            setToast(prev => prev?.message === message ? null : prev);
+        }, 3500);
+    };
 
     const filteredConfigStudents = useMemo(() => {
         return tempStudents.split('\n').map(s => s.trim()).filter(Boolean)
@@ -213,16 +236,24 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
     // Hidden input ref for folder upload
     const folderInputRef = useRef<HTMLInputElement>(null);
 
+    const prevClassIdRef = useRef(selectedClassId);
+
     // Sync temp state when selected class changes
     useEffect(() => {
-        const currentClass = classes.find(c => c.id === selectedClassId);
-        if (currentClass) {
-            setTempStudents(currentClass.students);
-            setTempQuestions(currentClass.questions);
-            setTempTimeLimit(currentClass.timePerQuestion || 30);
-            setTempStudentsPerGroup(currentClass.studentsPerGroup || 5);
-            setTempQuestionsPerTurn(currentClass.questionsPerTurn || 10);
-            setTempPrioritizedStudents(currentClass.prioritizedStudents || []);
+        if (prevClassIdRef.current !== selectedClassId) {
+            prevClassIdRef.current = selectedClassId;
+            const currentClass = classes.find(c => c.id === selectedClassId);
+            if (currentClass) {
+                setTempStudents(currentClass.students);
+                setTempQuestions(currentClass.questions);
+                setTempTimeLimit(currentClass.timePerQuestion || 30);
+                setTempStudentsPerGroup(currentClass.studentsPerGroup || 5);
+                setTempQuestionsPerTurn(currentClass.questionsPerTurn || 10);
+                setTempPrioritizedStudents(currentClass.prioritizedStudents || []);
+                setConfirmDeleteQuestions(false);
+                setConfirmDeleteClass(false);
+                setShowRenameInput(false);
+            }
         }
     }, [selectedClassId, classes]);
 
@@ -303,32 +334,39 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                 : formattedNewQuestions;
 
             handleUpdateCurrentClass('questions', updatedQuestions);
-            alert(`Đã kiểm tra chất lượng và tạo thành công ${newQuestions.length} câu hỏi mới!\n\n✓ Đã kiểm tra lại nội dung câu hỏi, 4 phương án trả lời và đáp án đúng.\n✓ Đã hoán vị ngẫu nhiên các phương án và đáp án để đảm bảo mỗi phương án đúng A, B, C, D đều đạt tỉ lệ 25%.`);
+            showToast(`Đã tạo thành công ${newQuestions.length} câu hỏi mới! Đã cân đối độ dài và hoán vị đáp án A, B, C, D đều 25%.`, "success");
         } else {
-            alert("Không thể tạo câu hỏi. Vui lòng kiểm tra lại API Key hoặc thử lại sau.");
+            showToast("Không thể tạo câu hỏi. Vui lòng kiểm tra lại kết nối mạng hoặc thử lại.", "error");
         }
         setIsGenerating(false);
     };
 
     const handleBalanceQuestions = () => {
         if (!tempQuestions.trim()) {
-            alert("Chưa có câu hỏi nào để hoán vị!");
+            showToast("Chưa có câu hỏi nào để hoán vị!", "error");
             return;
         }
         const res = balanceAndPermuteQuestionsText(tempQuestions);
         if (res.count === 0) {
-            alert("Không tìm thấy câu hỏi hợp lệ để hoán vị. Vui lòng kiểm tra định dạng câu hỏi (mỗi câu cần có nội dung, 4 phương án A, B, C, D và dòng Đáp án).");
+            showToast("Không tìm thấy câu hỏi hợp lệ để hoán vị. Cần đủ 4 phương án A, B, C, D và đáp án.", "error");
             return;
         }
         handleUpdateCurrentClass('questions', res.formattedText);
-        alert(`Đã kiểm tra chất lượng và hoán vị thành công ${res.count} câu hỏi!\nTỉ lệ đáp án sau khi cân bằng:\n- A: ${res.distribution.A} (${Math.round((res.distribution.A / res.count) * 100)}%)\n- B: ${res.distribution.B} (${Math.round((res.distribution.B / res.count) * 100)}%)\n- C: ${res.distribution.C} (${Math.round((res.distribution.C / res.count) * 100)}%)\n- D: ${res.distribution.D} (${Math.round((res.distribution.D / res.count) * 100)}%)`);
+        showToast(`Đã cân bằng & hoán vị ${res.count} câu hỏi! Tỉ lệ đáp án: A: ${res.distribution.A}, B: ${res.distribution.B}, C: ${res.distribution.C}, D: ${res.distribution.D}`, "success");
+    };
+
+    const handleClearAllQuestions = () => {
+        handleUpdateCurrentClass('questions', '');
+        setTempQuestions('');
+        setConfirmDeleteQuestions(false);
+        showToast("Đã xóa sạch toàn bộ câu hỏi của lớp này!", "info");
     };
 
     const handleAddClass = () => {
         if (!newClassName.trim()) return;
         const newClass: ClassData = {
             id: `class-${Date.now()}`,
-            name: newClassName,
+            name: newClassName.trim(),
             students: "",
             questions: "",
             timePerQuestion: 30,
@@ -338,29 +376,43 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
         };
         setClasses(prev => [...prev, newClass]);
         setSelectedClassId(newClass.id);
+        try {
+            localStorage.setItem('wheel_active_class_id', newClass.id);
+        } catch (e) {}
         setNewClassName("");
         setShowNewClassInput(false);
+        showToast(`Đã thêm lớp ${newClass.name}!`, "success");
     };
 
     const handleDeleteClass = () => {
         if (classes.length <= 1) {
-            alert("Phải giữ lại ít nhất một lớp học!");
+            showToast("Phải giữ lại ít nhất một lớp học!", "error");
             return;
         }
-        if (confirm("Bạn có chắc chắn muốn xóa lớp này?")) {
-            const newClasses = classes.filter(c => c.id !== selectedClassId);
-            setClasses(newClasses);
-            setSelectedClassId(newClasses[0].id);
-        }
+        const newClasses = classes.filter(c => c.id !== selectedClassId);
+        setClasses(newClasses);
+        const nextId = newClasses[0].id;
+        setSelectedClassId(nextId);
+        try {
+            localStorage.setItem('wheel_active_class_id', nextId);
+        } catch (e) {}
+        setConfirmDeleteClass(false);
+        showToast("Đã xóa lớp học thành công!", "info");
     };
 
-    const handleRenameClass = () => {
+    const handleStartRename = () => {
         const currentClass = classes.find(c => c.id === selectedClassId);
         if (!currentClass) return;
-        const newName = prompt("Nhập tên mới cho lớp:", currentClass.name);
-        if (newName && newName.trim()) {
-            setClasses(prev => prev.map(c => c.id === selectedClassId ? { ...c, name: newName } : c));
-        }
+        setRenameValue(currentClass.name);
+        setShowRenameInput(true);
+    };
+
+    const handleConfirmRename = () => {
+        if (!renameValue.trim()) return;
+        const updatedName = renameValue.trim();
+        setClasses(prev => prev.map(c => c.id === selectedClassId ? { ...c, name: updatedName } : c));
+        setShowRenameInput(false);
+        showToast(`Đã đổi tên lớp thành "${updatedName}"!`, "success");
     };
 
     const handleSave = () => {
@@ -516,12 +568,35 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                     <h2 className="text-3xl font-bold text-gray-800">Cấu hình</h2>
                 </div>
                 
+                {/* Toast Notification */}
+                {toast && (
+                    <div className={`fixed top-6 right-6 z-50 flex items-center gap-2.5 px-4 py-3 rounded-2xl shadow-2xl border text-sm font-bold animate-fade-in ${
+                        toast.type === 'error' ? 'bg-red-50 text-red-800 border-red-200' :
+                        toast.type === 'success' ? 'bg-green-50 text-green-800 border-green-200' :
+                        'bg-blue-50 text-blue-800 border-blue-200'
+                    }`}>
+                        {toast.type === 'error' && <AlertCircle size={18} className="text-red-600 shrink-0" />}
+                        {toast.type === 'success' && <CheckCircle2 size={18} className="text-green-600 shrink-0" />}
+                        {(!toast.type || toast.type === 'info') && <Check size={18} className="text-blue-600 shrink-0" />}
+                        <span>{toast.message}</span>
+                        <button onClick={() => setToast(null)} className="ml-2 p-1 hover:bg-black/5 rounded-lg text-gray-500">
+                            <X size={15} />
+                        </button>
+                    </div>
+                )}
+                
                 <div className="flex flex-wrap items-center gap-2 bg-gray-50 p-2 rounded-xl">
                     <span className="text-sm font-bold text-gray-500 px-2">Lớp học:</span>
                     <select 
                         value={selectedClassId}
-                        onChange={(e) => setSelectedClassId(e.target.value)}
-                        className="p-2 border border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none min-w-[150px]"
+                        onChange={(e) => {
+                            const newId = e.target.value;
+                            setSelectedClassId(newId);
+                            try {
+                                localStorage.setItem('wheel_active_class_id', newId);
+                            } catch (err) {}
+                        }}
+                        className="p-2 border border-gray-300 rounded-lg text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none min-w-[150px] bg-white"
                     >
                         {classes.map(c => (
                             <option key={c.id} value={c.id}>{c.name}</option>
@@ -531,12 +606,31 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                     <button onClick={() => setShowNewClassInput(true)} className="p-2 text-green-600 hover:bg-green-100 rounded-lg" title="Thêm lớp mới">
                         <Plus size={20} />
                     </button>
-                    <button onClick={handleRenameClass} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg" title="Đổi tên lớp">
+                    <button onClick={handleStartRename} className="p-2 text-blue-600 hover:bg-blue-100 rounded-lg" title="Đổi tên lớp">
                         <Edit2 size={20} />
                     </button>
-                    <button onClick={handleDeleteClass} className="p-2 text-red-600 hover:bg-red-100 rounded-lg" title="Xóa lớp">
-                        <Trash2 size={20} />
-                    </button>
+                    
+                    {confirmDeleteClass ? (
+                        <div className="flex items-center gap-1.5 bg-red-50 border border-red-200 px-2 py-1 rounded-lg">
+                            <span className="text-xs font-bold text-red-700">Xóa lớp?</span>
+                            <button 
+                                onClick={handleDeleteClass}
+                                className="px-2 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold transition-colors"
+                            >
+                                Xóa
+                            </button>
+                            <button 
+                                onClick={() => setConfirmDeleteClass(false)}
+                                className="p-0.5 hover:bg-gray-200 text-gray-500 rounded text-xs"
+                            >
+                                <X size={14} />
+                            </button>
+                        </div>
+                    ) : (
+                        <button onClick={() => setConfirmDeleteClass(true)} className="p-2 text-red-600 hover:bg-red-100 rounded-lg" title="Xóa lớp">
+                            <Trash2 size={20} />
+                        </button>
+                    )}
 
                     <div className="w-px h-6 bg-gray-300 mx-2"></div>
                     
@@ -608,6 +702,33 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                     />
                 </div>
             </div>
+
+            {/* Rename Class Input */}
+            {showRenameInput && (
+                <div className="mb-6 flex gap-2 animate-fade-in bg-amber-50 p-4 rounded-xl border border-amber-200">
+                    <input 
+                        type="text" 
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        placeholder="Nhập tên mới cho lớp..."
+                        className="flex-1 p-3 border border-amber-300 rounded-xl focus:ring-2 focus:ring-amber-500 outline-none bg-white font-medium"
+                        onKeyDown={(e) => { if (e.key === 'Enter') handleConfirmRename(); }}
+                        autoFocus
+                    />
+                    <button 
+                        onClick={handleConfirmRename}
+                        className="px-6 py-2 bg-amber-600 text-white font-bold rounded-xl hover:bg-amber-700 transition-colors shadow-sm"
+                    >
+                        Lưu tên
+                    </button>
+                    <button 
+                        onClick={() => setShowRenameInput(false)}
+                        className="px-4 py-2 text-gray-500 font-bold hover:bg-gray-200 rounded-xl transition-colors"
+                    >
+                        Hủy
+                    </button>
+                </div>
+            )}
 
             {/* Add New Class Modal Input */}
             {showNewClassInput && (
@@ -894,16 +1015,12 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                                 <Shuffle size={18} />
                             </button>
                             <button 
-                                onClick={() => {
-                                    if (confirm("Bạn có chắc chắn muốn xóa TẤT CẢ câu hỏi của lớp này? Hành động này không thể hoàn tác.")) {
-                                        handleUpdateCurrentClass('questions', '');
-                                    }
-                                }}
-                                className="p-2 text-red-600 hover:bg-red-100 rounded-lg" 
-                                title="Xóa tất cả câu hỏi"
-                            >
-                                <Trash2 size={18} />
-                            </button>
+    onClick={() => setConfirmDeleteQuestions(true)}
+    className="p-2 text-red-600 hover:bg-red-100 rounded-lg"
+    title="Xóa tất cả câu hỏi"
+>
+    <Trash2 size={18} />
+</button>
                             <label className="p-2 text-gray-600 hover:bg-gray-100 rounded-lg cursor-pointer" title="Nhập từ Word">
                                 <Upload size={18} />
                                 <input type="file" accept=".docx" className="hidden" onChange={(e) => handleImportWord(e, 'questions')} />
@@ -916,7 +1033,42 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                             </button>
                         </div>
                     </div>
-                    
+                    {/* Xác nhận xóa toàn bộ câu hỏi */}
+{confirmDeleteQuestions && (
+    <div className="mb-3 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center justify-between gap-3 animate-fade-in">
+
+        <div className="flex items-center gap-2">
+            <AlertCircle size={22} className="text-red-600 shrink-0" />
+
+            <div>
+                <p className="font-bold text-red-800 text-sm">
+                    Xác nhận xóa toàn bộ câu hỏi?
+                </p>
+
+                <p className="text-xs text-red-600">
+                    Tất cả câu hỏi của lớp hiện tại sẽ bị xóa.
+                    Hành động này không thể hoàn tác.
+                </p>
+            </div>
+        </div>
+
+        <div className="flex gap-2 shrink-0">
+            <button
+                onClick={handleClearAllQuestions}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold"
+            >
+                Xóa tất cả
+            </button>
+
+            <button
+                onClick={() => setConfirmDeleteQuestions(false)}
+                className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-lg text-sm font-bold"
+            >
+                Hủy
+            </button>
+        </div>
+    </div>
+)}
                     {/* AI Generator */}
                     <div className="mb-4 bg-gradient-to-r from-purple-50 to-indigo-50 p-4 rounded-xl border border-purple-100 shadow-sm">
                         <div className="flex gap-2">
@@ -943,7 +1095,7 @@ const ConfigPanel: React.FC<ConfigPanelProps> = ({ rawStudents, rawQuestions, in
                         </div>
                         <div className="mt-2.5 text-xs text-indigo-700 flex items-center gap-1.5 font-medium bg-white/70 px-3 py-1.5 rounded-lg border border-purple-100">
                             <CheckCircle2 size={15} className="text-green-600 shrink-0" />
-                            <span>Tự động kiểm tra chất lượng & hoán vị phương án đảm bảo đáp án đúng A, B, C, D đạt tỉ lệ đều 25%.</span>
+                            <span>Tự động cân đối độ dài các phương án trả lời không chênh lệch & hoán vị đáp án đúng A, B, C, D đều đạt 25%.</span>
                         </div>
                     </div>
 
